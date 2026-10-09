@@ -1,0 +1,12 @@
+select plan(10);
+select ok(exists(select 1 from pg_policies where schemaname='public' and tablename='students' and policyname='students_select_scoped'),'students scoped policy');
+select ok(not exists(select 1 from pg_policies where schemaname='public' and tablename='students' and policyname='students_select_secure'),'students no generic select');
+select ok(exists(select 1 from pg_policies where schemaname='public' and tablename='parents' and policyname='parents_select_scoped'),'parents scoped policy');
+select ok(exists(select 1 from pg_policies where schemaname='public' and tablename='documents' and policyname='documents_select_scoped'),'documents scoped policy');
+select ok(exists(select 1 from pg_policies where schemaname='public' and tablename='audit_logs' and policyname='audit_select_secure'),'audit select policy');
+select ok(exists(select 1 from pg_policies where schemaname='storage' and tablename='objects' and policyname='storage_school_documents_select'),'storage select policy');
+select ok((select relrowsecurity from pg_class where oid='public.students'::regclass),'students RLS active');
+select ok((select relrowsecurity from pg_class where oid='public.payments'::regclass),'payments RLS active');
+select ok((select relrowsecurity from pg_class where oid='public.stock_movements'::regclass),'stock RLS active');
+select ok(not exists(select 1 from information_schema.columns where table_schema='public' and table_name='users' and column_name='password'),'no password in public.users');
+select * from finish();

@@ -1,0 +1,32 @@
+SIGIA-AMINE — ÉTAPE 19 — STOCKS / ACHATS
+
+PÉRIMÈTRE
+[ ] Produits / catégories / seuils
+[ ] Emplacements de stock
+[ ] Fournisseurs
+[ ] Demandes d’achat
+[ ] Commandes d’achat
+[ ] Réceptions
+[ ] Mouvements de stock
+[ ] Inventaires
+[ ] Transferts inter-emplacements
+[ ] Factures fournisseurs
+[ ] Paiements fournisseurs reliés à la caisse
+
+SÉCURITÉ
+[ ] RLS activé sur les nouvelles tables
+[ ] Lecture limitée par école / permission
+[ ] Mutations sensibles via RPC
+[ ] Contrôle anti-cross-school
+[ ] Stock négatif interdit
+[ ] Quantités reçues <= quantités commandées
+[ ] Paiements fournisseurs <= reste de la facture
+
+VALIDATION LOCALE
+npx supabase db reset
+npx supabase test db --local
+npx supabase db lint --local
+npx supabase gen types typescript --local > src/types/database.types.ts
+npm run typecheck
+npm run build
+npm run dev

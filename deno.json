@@ -1,0 +1,5 @@
+{
+  "tasks": {
+    "check:functions": "deno check supabase/functions/ai-assistant/index.ts"
+  }
+}

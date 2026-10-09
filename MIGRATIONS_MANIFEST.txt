@@ -1,0 +1,48 @@
+202609230001_extensions_types.sql
+202609230002_core_organisation.sql
+202609230003_users_roles.sql
+202609230004_academic_reference.sql
+202609230005_personnel_teachers.sql
+202609230006_students_administration.sql
+202609230007_documents.sql
+202609230008_academic_assessment.sql
+202609230009_school_life_boarding_catering.sql
+202609230010_tahfiz_wushu.sql
+202609230011_finance.sql
+202609230012_stock_agriculture_hr.sql
+202609230013_communication_ai_audit_logic_seed.sql
+202609230014_hardening_1a1_security_rls_storage.sql
+202609250015_admissions_workflow.sql
+202609250016_enrollments_workflow.sql
+
+017 — Niveaux / Classes — référentiel académique, RLS, RPC et index
+
+018 — Matières — catalogue + configuration par niveau/année + RLS/RPC
+
+019 — Enseignants / Affectations — profils enseignants, RPC, RLS et intégrité pédagogique
+
+020 — Dossier élève complet — RPC d'agrégation sécurisée, index et dossier unifié
+
+021 202609250021_pedagogy_workflows.sql
+
+022 202609260022_school_life_workflows.sql
+
+Étape 14 — Vie scolaire : présence, absence, retard, justificatifs, discipline, suivi éducatif, récompenses, RLS, RPC et intégration au dossier élève.
+024 | 202609260024_boarding_workflows.sql | Étape 16 — Internat
+
+025 | 202609260025_catering_workflows.sql | Étape 17 — Restauration
+
+026 | 202609260026_hr_payroll_workflows.sql | Étape 18 — Personnel / RH / Paie
+027 | 202609260027_stock_purchases_workflows.sql | Étape 19 — Stocks / Achats
+028 202609260028_tahfiz_arabe_workflows.sql
+
+029 202609260029_wushu_workflows.sql — Étape 21 Wushu
+
+031 202609260031_documents_communication_workflows.sql
+
+032 | 202609260032_statistics_dashboards_workflows.sql | Statistiques / Dashboards
+
+033 | 202609260033_ai_workflows.sql | Étape 25 — Intelligence artificielle
+
+
+ÉTAPE 26 — Production / déploiement final — aucun changement de schéma ; industrialisation du déploiement de l'ensemble des migrations et Edge Functions jusqu'à 033.

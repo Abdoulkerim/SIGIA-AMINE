@@ -1,0 +1,16 @@
+SIGIA-AMINE — ÉTAPE 21 WUSHU
+
+[ ] Migration 029 appliquée
+[ ] Tests DB 018 verts
+[ ] db lint vert
+[ ] Types Supabase générés
+[ ] typecheck vert
+[ ] build vert
+[ ] Groupes Wushu testés
+[ ] Affectations élèves testées
+[ ] Entraînements testés
+[ ] Présences testées
+[ ] Évaluations / grades testés
+[ ] Publication testée
+[ ] Compétitions et résultats testés
+[ ] Dossier élève Wushu vérifié

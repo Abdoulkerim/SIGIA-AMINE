@@ -1,0 +1,14 @@
+STEP 23 CHECKLIST
+[ ] npx supabase db reset
+[ ] npx supabase test db --local
+[ ] npx supabase db lint --local
+[ ] npx supabase gen types typescript --local > src/types/database.types.ts
+[ ] npm run typecheck
+[ ] npm run build
+[ ] npm run dev
+[ ] Tester dépôt d'un document
+[ ] Tester archivage
+[ ] Tester demande de document
+[ ] Tester création + publication d'une annonce
+[ ] Vérifier réception d'une notification
+[ ] Vérifier accès parent/enfant à ses documents

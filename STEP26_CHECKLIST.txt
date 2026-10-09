@@ -1,0 +1,32 @@
+SIGIA-AMINE — ÉTAPE 26 / CHECKLIST PRODUCTION
+
+[ ] Version Git gelée et taguée
+[ ] Tests DB locaux verts
+[ ] Dépendances principales figées
+[ ] package-lock.json généré sur machine connectée avant release finale
+[ ] Typecheck vert
+[ ] Build production vert
+[ ] Projet Supabase STAGING créé
+[ ] Projet Supabase PRODUCTION créé séparément
+[ ] Migrations vérifiées en staging
+[ ] Security Advisor vérifié
+[ ] RLS activées et politiques vérifiées
+[ ] Buckets Storage et policies vérifiés
+[ ] Auth / redirect URLs configurées
+[ ] Domaine production configuré
+[ ] Variables Vercel Production configurées
+[ ] Secrets Edge Function configurés
+[ ] Edge Function ai-assistant déployée
+[ ] Compte Super Admin créé via procédure sécurisée
+[ ] Année scolaire officielle confirmée
+[ ] Aucun seed de données personnelles de test envoyé en production
+[ ] Smoke test /api/health vert
+[ ] Test connexion / déconnexion vert
+[ ] Test RLS par rôle vert
+[ ] Test finance vert
+[ ] Test notes/bulletins vert
+[ ] Test documents/storage vert
+[ ] Test IA vert sans mutation métier
+[ ] Sauvegardes vérifiées
+[ ] Procédure de rollback documentée
+[ ] Journal de mise en production archivé

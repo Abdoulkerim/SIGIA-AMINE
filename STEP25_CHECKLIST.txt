@@ -1,0 +1,16 @@
+SIGIA-AMINE — ÉTAPE 25 — CHECKLIST
+
+[ ] Migration 033 appliquée
+[ ] Tests DB 022 verts
+[ ] Secrets Edge Function configurés
+[ ] Edge Function ai-assistant servie localement
+[ ] OPENAI_API_KEY non versionnée
+[ ] AI_MODEL vérifié
+[ ] Chat IA accessible selon ai.use
+[ ] Recherche élève testée avec les droits du profil
+[ ] Dashboards IA testés
+[ ] Alerte IA créée en statut open
+[ ] Alerte validée par un responsable
+[ ] npm run typecheck vert
+[ ] npm run build vert
+[ ] npm run dev vert

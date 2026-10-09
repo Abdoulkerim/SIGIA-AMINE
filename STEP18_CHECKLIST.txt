@@ -1,0 +1,50 @@
+SIGIA-AMINE — ÉTAPE 18 — PERSONNEL / RH / PAIE
+
+Base : Étape 17 — Restauration
+Migration : supabase/migrations/202609260026_hr_payroll_workflows.sql
+Test DB : supabase/tests/database/015_hr_payroll_contract.sql
+
+PÉRIMÈTRE
+[OK] Dossiers employés
+[OK] Fonctions / services / statut
+[OK] Contrats
+[OK] Présences et absences du personnel
+[OK] Congés + approbation
+[OK] Compétences
+[OK] Formations
+[OK] Paie paramétrable
+[OK] Génération paie depuis contrats actifs couvrant la période
+[OK] Validation / paiement / clôture
+[OK] Tableau de bord RH
+[OK] Dossier employé agrégé
+
+SÉCURITÉ
+[OK] Permissions hr.view / hr.manage / payroll.view / payroll.manage
+[OK] RLS de lecture par périmètre
+[OK] Écritures RH/paie via RPC
+[OK] search_path='' pour les nouvelles RPC SECURITY DEFINER
+[OK] Contrôle école / employé / contrat / période
+[OK] Blocage des contrats chevauchants
+[OK] Blocage des congés chevauchants
+[OK] Blocage des périodes de paie chevauchantes
+[OK] Net de paie non négatif
+
+PAGES
+[OK] /personnel
+[OK] /personnel/employes
+[OK] /personnel/employes/nouveau
+[OK] /personnel/employes/[id]
+[OK] /personnel/contrats
+[OK] /personnel/presences
+[OK] /personnel/conges
+[OK] /personnel/formations
+[OK] /personnel/paie
+
+VALIDATION LOCALE À EFFECTUER SUR LE POSTE DE DÉVELOPPEMENT
+npx supabase db reset
+npx supabase test db --local
+npx supabase db lint --local
+npx supabase gen types typescript --local > src/types/database.types.ts
+npm run typecheck
+npm run build
+npm run dev

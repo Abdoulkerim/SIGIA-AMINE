@@ -1,0 +1,21 @@
+ÉTAPE 22 — CHECKLIST
+
+[ ] npx supabase db reset
+[ ] npx supabase test db --local
+[ ] npx supabase db lint --local
+[ ] npx supabase gen types typescript --local > src/types/database.types.ts
+[ ] npm run typecheck
+[ ] npm run build
+[ ] npm run dev
+
+Fonctionnel :
+[ ] Créer une activité Agriculture / Élevage / AGR
+[ ] Créer un site
+[ ] Créer une campagne agricole
+[ ] Enregistrer un intrant avec mouvement stock issue
+[ ] Enregistrer une production avec mouvement production_in
+[ ] Enregistrer un cheptel
+[ ] Enregistrer un événement d'élevage
+[ ] Enregistrer une vente avec ligne et mouvement stock sale
+[ ] Consulter le dashboard économique
+[ ] Vérifier les protections multi-écoles

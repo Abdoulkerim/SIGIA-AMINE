@@ -1,0 +1,9 @@
+PRODUCTION DEPENDENCY NOTE
+
+Les versions principales ont été figées dans package.json pour cette release, et Node 26 est fixé via `.nvmrc`/`.node-version`. La génération automatique de package-lock.json n'a pas pu être terminée dans l'environnement de construction (accès registre npm indisponible/timeout).
+
+Avant la première release de production sur une machine disposant d'Internet, exécuter :
+
+  npm install --package-lock-only
+
+Puis committer package-lock.json et remplacer `npm install` par `npm ci` dans la CI. Ne pas lancer la production avec un lockfile absent sans avoir validé le build sur l'environnement cible.

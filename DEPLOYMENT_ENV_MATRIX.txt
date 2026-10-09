@@ -1,0 +1,28 @@
+SIGIA-AMINE — ENVIRONNEMENTS
+
+LOCAL
+- Next.js: localhost:3000
+- Supabase: local CLI stack
+- Edge secrets: supabase/functions/.env (gitignored)
+- Seed: supabase/seed.sql (development/institutional only)
+
+STAGING (RECOMMENDED)
+- Separate Supabase project
+- Separate Vercel Preview/Project environment
+- Same migrations as production
+- Safe test accounts/data only
+
+PRODUCTION
+- Dedicated Supabase production project
+- Vercel Production deployment
+- Production domain + HTTPS
+- Production Edge Function secrets
+- Backups enabled and tested
+- No direct schema changes in Supabase Dashboard
+
+NEVER SHARE OR COMMIT
+- OPENAI_API_KEY
+- Supabase secret/service-role keys
+- Database passwords
+- Personal access tokens
+- Real user credentials

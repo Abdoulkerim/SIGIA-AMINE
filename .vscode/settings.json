@@ -1,0 +1,11 @@
+{
+  "editor.formatOnSave": true,
+  "files.exclude": {
+    "**/.next": true,
+    "**/node_modules": true
+  },
+  "search.exclude": {
+    "**/.next": true,
+    "**/node_modules": true
+  }
+}
