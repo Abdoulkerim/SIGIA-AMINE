@@ -16,7 +16,6 @@ export default async function NewInvoicePage({ searchParams }: { searchParams: P
     <div className="field"><label className="label">Type de frais</label><select className="select" name="feeTypeId"><option value="">—</option>{fees?.map((f:any)=><option key={f.id} value={f.id}>{f.code} • {f.name}</option>)}</select></div>
     <div className="field"><label className="label">Date d’émission</label><input className="input" type="date" name="issueDate" defaultValue={today} required /></div>
     <div className="field"><label className="label">Date d’échéance</label><input className="input" type="date" name="dueDate" /></div>
-    <div className="field"><label className="label">Quantité</label><input className="input" type="number" step="0.01" name="quantity" defaultValue="1" required /></div>
     <div className="field"><label className="label">Montant unitaire (FCFA)</label><input className="input" type="number" step="0.01" name="unitAmount" required /></div>
     <div className="field"><label className="label">Remise (FCFA)</label><input className="input" type="number" step="0.01" name="discount" defaultValue="0" /></div>
   </div><div className="field"><label className="label">Désignation</label><input className="input" name="description" placeholder="Scolarité — période 1" required /></div>

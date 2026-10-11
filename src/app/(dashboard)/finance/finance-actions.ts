@@ -77,7 +77,7 @@ export async function createInvoice(formData: FormData) {
   const parsed = invoiceSchema.safeParse({
     studentId: formData.get('studentId'), parentId: formData.get('parentId') || undefined,
     issueDate: formData.get('issueDate'), dueDate: formData.get('dueDate') || undefined, notes: formData.get('notes') || undefined,
-    description: formData.get('description'), quantity: formData.get('quantity'), unitAmount: formData.get('unitAmount'),
+    description: formData.get('description'), quantity: formData.get('quantity') || 1, unitAmount: formData.get('unitAmount'),
     discount: formData.get('discount') || 0, feeTypeId: formData.get('feeTypeId') || undefined,
   })
   if (!parsed.success) redirect(errUrl('/finance/factures/nouvelle', 'Données de facture invalides.'))
