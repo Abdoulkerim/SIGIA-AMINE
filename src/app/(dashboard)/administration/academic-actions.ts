@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentUserContext } from '@/lib/auth/current-user'
 
 const levelSchema = z.object({
   id: z.string().uuid().optional(),
@@ -23,8 +24,71 @@ const classSchema = z.object({
   capacity: z.coerce.number().int().positive().optional(),
 })
 
+const dateOnlySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
+  const parsed = new Date(`${value}T00:00:00.000Z`)
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
+}, 'Date invalide.')
+
+const schoolYearSchema = z.object({
+  name: z.string().trim().min(1, 'Le nom de l’année scolaire est obligatoire.').max(100),
+  startDate: dateOnlySchema,
+  endDate: dateOnlySchema,
+  isCurrent: z.enum(['true', 'false']),
+  returnTo: z.enum(['/administration/classes', '/administration/classes/nouveau']),
+}).refine((value) => value.endDate >= value.startDate, {
+  path: ['endDate'],
+  message: 'La date de fin doit être postérieure ou égale à la date de début.',
+})
+
 function errUrl(base: string, error: string): string {
   return `${base}?error=${encodeURIComponent(error)}`
+}
+
+export async function createSchoolYear(formData: FormData) {
+  const context = await getCurrentUserContext()
+  const schoolId = context?.profile.school_id
+  if (!schoolId) redirect('/login')
+
+  const returnTo = formData.get('returnTo') === '/administration/classes/nouveau'
+    ? '/administration/classes/nouveau'
+    : '/administration/classes'
+  const parsed = schoolYearSchema.safeParse({
+    name: formData.get('name'),
+    startDate: formData.get('startDate'),
+    endDate: formData.get('endDate'),
+    isCurrent: formData.get('isCurrent') === 'on' ? 'true' : 'false',
+    returnTo,
+  })
+
+  if (!parsed.success) {
+    const message = parsed.error.issues[0]?.message ?? 'Vérifiez les champs de l’année scolaire.'
+    redirect(`${errUrl('/administration/classes/annee-scolaire/nouvelle', message)}&returnTo=${encodeURIComponent(returnTo)}`)
+  }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('school_years')
+    .insert({
+      school_id: schoolId,
+      name: parsed.data.name,
+      start_date: parsed.data.startDate,
+      end_date: parsed.data.endDate,
+      is_current: parsed.data.isCurrent === 'true',
+    })
+    .select('id')
+    .single()
+
+  if (error || !data) {
+    const message = error?.code === '23505'
+      ? 'Une année scolaire porte déjà ce nom.'
+      : error?.message ?? 'La création de l’année scolaire a échoué.'
+    redirect(`${errUrl('/administration/classes/annee-scolaire/nouvelle', message)}&returnTo=${encodeURIComponent(returnTo)}`)
+  }
+
+  revalidatePath('/administration/classes')
+  revalidatePath('/administration/classes/nouveau')
+  revalidatePath('/administration/niveaux')
+  redirect(`${parsed.data.returnTo}?year=${encodeURIComponent(data.id)}&createdYear=1`)
 }
 
 export async function createLevel(formData: FormData) {

@@ -2,13 +2,15 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
 import { createClass } from '../../academic-actions'
+import { SchoolYearSelect } from '@/components/administration/school-year-select'
 
-export default async function NewClassPage() {
+export default async function NewClassPage({ searchParams }: { searchParams: Promise<{ error?: string; year?: string; createdYear?: string }> }) {
+  const params = await searchParams
   const context = await getCurrentUserContext()
   if (!context?.profile.school_id) return null
 
   const supabase = await createClient()
-  const { data: years } = await supabase
+  const { data: years, error: yearsError } = await supabase
     .from('school_years')
     .select('id, name, is_current')
     .eq('school_id', context.profile.school_id)
@@ -24,13 +26,16 @@ export default async function NewClassPage() {
         <Link className="button button-secondary" href="/administration/classes">Retour</Link>
       </div>
 
+      {params.error ? <p className="error" role="alert">{params.error}</p> : null}
+      {params.createdYear ? <p className="success">Année scolaire créée et sélectionnée.</p> : null}
+      {yearsError ? <p className="error">Impossible de charger les années scolaires : {yearsError.message}</p> : null}
+      {!years?.length ? <p className="error">Aucune année scolaire n’est configurée. Créez-en une pour pouvoir enregistrer une classe.</p> : null}
+
       <section className="card" style={{ maxWidth: 900 }}>
         <form action={createClass} className="grid grid-2">
           <div className="field">
             <label className="label" htmlFor="schoolYearId">Année scolaire *</label>
-            <select className="select" id="schoolYearId" name="schoolYearId" required defaultValue={years?.find((year) => year.is_current)?.id ?? years?.[0]?.id ?? ''}>
-              {(years ?? []).map((year) => <option key={year.id} value={year.id}>{year.name}{year.is_current ? ' — actuelle' : ''}</option>)}
-            </select>
+            <SchoolYearSelect years={years ?? []} name="schoolYearId" id="schoolYearId" value={params.year ?? years?.find((year) => year.is_current)?.id ?? years?.[0]?.id ?? ''} required returnTo="/administration/classes/nouveau" />
           </div>
           <div className="field">
             <label className="label" htmlFor="code">Code *</label>
@@ -53,7 +58,7 @@ export default async function NewClassPage() {
             <input className="input" id="capacity" name="capacity" type="number" min="1" step="1" />
           </div>
           <div className="actions" style={{ gridColumn: '1 / -1' }}>
-            <button className="button button-primary" type="submit">Créer la classe</button>
+            <button className="button button-primary" type="submit" disabled={!years?.length}>Créer la classe</button>
             <Link className="button button-secondary" href="/administration/classes">Annuler</Link>
           </div>
         </form>
