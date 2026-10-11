@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createStudent } from '../actions'
+import { PhotoUpload } from '@/components/students/photo-upload'
 
 export default async function NewStudentPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const params = await searchParams
@@ -53,6 +54,8 @@ export default async function NewStudentPage({ searchParams }: { searchParams: P
               </select>
             </div>
           </div>
+
+          <PhotoUpload />
 
           <div style={{ marginTop: 8, display: 'flex', gap: 10 }}>
             <button className="button button-primary" type="submit">Enregistrer l’élève</button>

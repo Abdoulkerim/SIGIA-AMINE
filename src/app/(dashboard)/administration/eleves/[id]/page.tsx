@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { updateStudent } from '../actions'
 import { getStudentDossier } from '@/server/services/students/get-student-dossier'
 import { createClient } from '@/lib/supabase/server'
+import { PhotoUpload } from '@/components/students/photo-upload'
 
 function text(value: unknown) {
   return value === null || value === undefined || value === '' ? '—' : String(value)
@@ -45,6 +46,14 @@ export default async function StudentDossierPage({
   const wushuData = wushu as any ?? { profile: null, sessions: [], evaluations: [], competitions: [] }
 
   const student = dossier.student
+  let signedPhotoUrl: string | null = null
+  if (student.photo_url && !/^https?:\/\//i.test(student.photo_url)) {
+    const { data } = await supabase.storage.from('student-photos').createSignedUrl(student.photo_url, 3600)
+    signedPhotoUrl = data?.signedUrl ?? null
+  }
+  const currentPhotoUrl = student.photo_url && /^https?:\/\//i.test(student.photo_url)
+    ? student.photo_url
+    : signedPhotoUrl
   const current = dossier.current_enrollment
 
   return (
@@ -111,7 +120,7 @@ export default async function StudentDossierPage({
             <div className="field"><label className="label" htmlFor="phone">Téléphone</label><input className="input" id="phone" name="phone" type="tel" defaultValue={student.phone ?? ''} maxLength={50} /></div>
             <div className="field"><label className="label" htmlFor="email">E-mail</label><input className="input" id="email" name="email" type="email" defaultValue={student.email ?? ''} maxLength={254} /></div>
             <div className="field"><label className="label" htmlFor="address">Adresse</label><textarea className="input" id="address" name="address" rows={3} defaultValue={student.address ?? ''} maxLength={500} /></div>
-            <div className="field"><label className="label" htmlFor="photoUrl">Photo (URL ou chemin de stockage)</label><input className="input" id="photoUrl" name="photoUrl" defaultValue={student.photo_url ?? ''} maxLength={1000} /></div>
+            <PhotoUpload initialPhotoUrl={currentPhotoUrl} />
             <h3>Contact d’urgence</h3>
             <div className="field"><label className="label" htmlFor="emergencyName">Nom complet</label><input className="input" id="emergencyName" name="emergencyName" defaultValue={contactValue(student.emergency_contact, 'full_name', 'name')} maxLength={200} /></div>
             <div className="grid grid-2">
