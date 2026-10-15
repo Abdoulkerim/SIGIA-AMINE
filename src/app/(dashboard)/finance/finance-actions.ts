@@ -27,12 +27,13 @@ const feeTypeSchema = z.object({
   code: z.string().trim().min(1).max(40),
   name: z.string().trim().min(1).max(160),
   category: z.string().trim().min(1).max(80),
+  price: z.coerce.number().finite().min(0).max(999999999999),
   description: z.string().trim().max(500).optional(),
 })
 
 export async function createFeeType(formData: FormData) {
   const parsed = feeTypeSchema.safeParse({
-    code: formData.get('code'), name: formData.get('name'), category: formData.get('category'),
+    code: formData.get('code'), name: formData.get('name'), category: formData.get('category'), price: formData.get('price'),
     description: formData.get('description') || undefined,
   })
   if (!parsed.success) redirect(errUrl('/finance/tarifs', 'Type de frais invalide.'))
@@ -40,7 +41,7 @@ export async function createFeeType(formData: FormData) {
   if (!schoolId) redirect(errUrl('/finance/tarifs', 'École introuvable.'))
   const { error } = await supabase.rpc('create_fee_type', {
     p_school_id: schoolId, p_code: parsed.data.code, p_name: parsed.data.name,
-    p_category: parsed.data.category, p_description: parsed.data.description ?? null,
+    p_category: parsed.data.category, p_description: parsed.data.description ?? null, p_default_amount: parsed.data.price,
   })
   if (error) redirect(errUrl('/finance/tarifs', error.message))
   revalidatePath('/finance/tarifs'); revalidatePath('/finance')
