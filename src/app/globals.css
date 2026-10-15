@@ -117,6 +117,23 @@ tr:last-child td { border-bottom: 0; }
 .login-space-link { display: inline-flex; min-height: 37px; align-items: center; justify-content: center; padding: 0 16px; border: 1px solid rgba(252,209,22,.82); border-radius: 999px; background: rgba(252,209,22,.08); color: #fff4b5; font-size: 12px; font-weight: 800; transition: background .15s ease,color .15s ease; }
 .login-space-link:hover, .login-space-link[aria-current='page'] { background: #fcd116; color: #332d15; }
 .login-footer-note { margin-left: auto; color: rgba(255,255,255,.52); font-size: 11px; text-align: right; }
+.it-tool-card { display: flex; align-items: center; gap: 15px; min-height: 110px; transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease; }
+.it-tool-card:hover { transform: translateY(-2px); border-color: #b8c7d8; box-shadow: 0 12px 28px rgba(15,23,42,.09); }
+.it-tool-icon { width: 46px; height: 46px; flex: 0 0 46px; display: grid; place-items: center; border-radius: 13px; }
+.it-tool-copy { display: grid; gap: 6px; min-width: 0; }
+.it-tool-copy strong { color: var(--text); font-size: 16px; }
+.it-tool-copy > span { color: var(--muted); font-size: 13px; line-height: 1.45; }
+.it-tool-arrow { margin-left: auto; color: #94a3b8; font-size: 20px; }
+.it-status-row { display: flex; align-items: center; gap: 10px; }
+.it-status-dot { width: 9px; height: 9px; flex: 0 0 9px; border-radius: 50%; background: #16a34a; }
+.it-status-dot.is-warning { background: #d97706; }
+.it-permission-list { display: flex; flex-wrap: wrap; gap: 5px; max-width: 520px; white-space: normal; }
+.it-permission-chip { display: inline-flex; padding: 4px 7px; border-radius: 999px; background: #f1f5f9; color: #475569; font-size: 11px; }
+.it-settings-list { display: grid; gap: 0; margin: 0; }
+.it-settings-list > div { display: grid; grid-template-columns: minmax(130px, .8fr) minmax(0, 1.2fr); gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+.it-settings-list > div:last-child { border-bottom: 0; }
+.it-settings-list dt { color: var(--muted); font-size: 13px; }
+.it-settings-list dd { min-width: 0; margin: 0; font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
 @media (max-width: 900px) {
   .login-decoration { width: 140px; opacity: .32; }
   .login-decoration-left { left: -12px; }
