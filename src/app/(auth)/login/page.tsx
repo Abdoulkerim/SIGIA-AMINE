@@ -1,6 +1,7 @@
 import { signIn } from './actions'
 
 const spaces = [
+  { id: 'maternelle', label: 'Maternelle' },
   { id: 'primaire', label: 'Primaire' },
   { id: 'secondaire', label: 'Secondaire' },
   { id: 'formation', label: 'Centre de formation' },
