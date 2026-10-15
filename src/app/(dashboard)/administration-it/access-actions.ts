@@ -47,7 +47,7 @@ export async function assignUserRole(formData: FormData) {
   const { context, schoolId, supabase } = manager
   if (target.data === context.profile.id) redirect(accessUrl(target.data, 'Pour éviter de perdre votre propre accès, vous ne pouvez pas modifier vos rôles ici.'))
 
-  const [{ data: user }, { data: selectedRole, error: roleError }] = await Promise.all([
+  const [user, { data: selectedRole, error: roleError }] = await Promise.all([
     ensureTargetUser(supabase, target.data, schoolId),
     supabase.from('roles').select('id,code').eq('id', role.data).maybeSingle(),
   ])
