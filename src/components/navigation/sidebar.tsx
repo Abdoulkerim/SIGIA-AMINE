@@ -225,6 +225,7 @@ const groups: NavGroup[] = [
     items: [
       { label: 'Outils IT', href: '/administration-it', icon: Settings },
       { label: 'Utilisateurs', href: '/administration-it/utilisateurs', icon: UsersRound },
+      { label: 'Accès utilisateurs', href: '/administration-it/acces', icon: ShieldCheck },
       { label: 'Rôles et permissions', href: '/administration-it/roles', icon: KeyRound },
       { label: 'Journal d’audit', href: '/administration-it/audit', icon: ScrollText },
       { label: 'Paramètres établissement', href: '/administration-it/parametres', icon: Settings },
@@ -237,8 +238,9 @@ function isCurrentPath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-export function Sidebar() {
+export function Sidebar({ canAccessIT }: { canAccessIT: boolean }) {
   const pathname = usePathname()
+  const visibleGroups = canAccessIT ? groups : groups.filter((group) => group.label !== 'Administration technique')
 
   return (
     <aside className="sidebar">
@@ -260,7 +262,7 @@ export function Sidebar() {
         </Link>
 
         <div className="nav-groups">
-          {groups.map((group) => {
+          {visibleGroups.map((group) => {
             const GroupIcon = group.icon
             const sectionIsActive = group.items.some((item) => isCurrentPath(pathname, item.href))
 

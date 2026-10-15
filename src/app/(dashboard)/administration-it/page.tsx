@@ -1,10 +1,11 @@
 import Link from 'next/link'
-import { Activity, KeyRound, ScrollText, Settings2, UsersRound } from 'lucide-react'
+import { Activity, KeyRound, ScrollText, Settings2, ShieldCheck, UsersRound } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
 
 const tools = [
   { title: 'Utilisateurs', description: 'Consulter les comptes et leurs rôles actifs.', href: '/administration-it/utilisateurs', icon: UsersRound, color: '#2563eb' },
+  { title: 'Accès utilisateurs', description: 'Attribuer les privilèges, gérer les connexions et voir les pages accessibles.', href: '/administration-it/acces', icon: ShieldCheck, color: '#b45309' },
   { title: 'Rôles et permissions', description: 'Vérifier les rôles et leurs autorisations.', href: '/administration-it/roles', icon: KeyRound, color: '#7c3aed' },
   { title: 'Journal d’audit', description: 'Suivre les opérations enregistrées par le système.', href: '/administration-it/audit', icon: ScrollText, color: '#c2410c' },
   { title: 'Paramètres établissement', description: 'Consulter les informations et réglages de l’école.', href: '/administration-it/parametres', icon: Settings2, color: '#0f766e' },

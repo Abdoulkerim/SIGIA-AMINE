@@ -10,11 +10,12 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
 
   const schoolId = context.profile.school_id
   const role = context.roles.find((r) => r.schoolId === schoolId) ?? context.roles[0]
+  const canAccessIT = context.roles.some(({ code }) => ['it_admin', 'super_admin', 'founder'].includes(code ?? ''))
   const displayName = `${context.profile.first_name} ${context.profile.last_name}`
 
   return (
     <div className="app-shell">
-      <Sidebar />
+      <Sidebar canAccessIT={canAccessIT} />
       <div className="main">
         <header className="topbar">
           <div>

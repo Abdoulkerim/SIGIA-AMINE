@@ -13,7 +13,7 @@ export async function getCurrentUserContext() {
     .eq('id', claims.sub)
     .single()
 
-  if (error || !profile) return null
+  if (error || !profile || profile.status !== 'active') return null
 
   const { data: roleRows } = await supabase
     .from('user_roles')

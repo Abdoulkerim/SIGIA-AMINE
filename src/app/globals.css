@@ -134,7 +134,37 @@ tr:last-child td { border-bottom: 0; }
 .it-settings-list > div:last-child { border-bottom: 0; }
 .it-settings-list dt { color: var(--muted); font-size: 13px; }
 .it-settings-list dd { min-width: 0; margin: 0; font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
+.it-access-layout { display: grid; grid-template-columns: minmax(260px,.8fr) minmax(0,2fr); align-items: start; gap: 16px; }
+.it-access-user-list { padding: 14px; }
+.it-access-user-list h2 { margin: 3px 5px 12px; font-size: 17px; }
+.it-access-users { display: grid; gap: 5px; max-height: 70vh; overflow: auto; }
+.it-access-user { display: flex; min-width: 0; align-items: center; gap: 10px; padding: 9px; border: 1px solid transparent; border-radius: 11px; }
+.it-access-user:hover { background: #f8fafc; }
+.it-access-user.is-selected { border-color: #bfdbfe; background: #eff6ff; }
+.it-access-user-avatar { width: 36px; height: 36px; flex: 0 0 36px; display: grid; place-items: center; border-radius: 50%; background: #e0e7ff; color: #3730a3; font-size: 12px; font-weight: 800; }
+.it-access-user-copy { display: grid; min-width: 0; flex: 1; gap: 3px; }
+.it-access-user-copy strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.it-access-user-copy small, .it-access-role small { overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.it-user-status { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 999px; background: #f1f5f9; color: #475569; font-size: 10px; font-weight: 800; white-space: nowrap; }
+.it-user-status.status-active { background: #dcfce7; color: #166534; }
+.it-user-status.status-suspended { background: #fee2e2; color: #991b1b; }
+.it-user-status.status-inactive { background: #f1f5f9; color: #475569; }
+.it-access-details { display: grid; gap: 16px; min-width: 0; }
+.it-access-profile { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.it-access-profile h2 { margin: 0; font-size: 19px; }
+.it-access-status-form { display: flex; align-items: end; gap: 12px; margin-top: 16px; }
+.it-access-role-list { display: grid; gap: 8px; margin-top: 16px; }
+.it-access-role { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
+.it-access-role > div { display: grid; flex: 1; gap: 4px; }
+.it-access-page-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.it-access-page { display: inline-flex; align-items: center; gap: 9px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-soft); font-size: 13px; font-weight: 700; }
+.it-access-page:hover { border-color: #94a3b8; background: #fff; }
+.it-access-page span { color: var(--muted); }
+.it-access-permissions { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.it-access-permissions summary { margin-bottom: 10px; color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 700; }
 @media (max-width: 900px) {
+  .it-access-layout { grid-template-columns: 1fr; }
+  .it-access-users { max-height: 290px; }
   .login-decoration { width: 140px; opacity: .32; }
   .login-decoration-left { left: -12px; }
   .login-decoration-right { right: 8px; }
@@ -144,6 +174,9 @@ tr:last-child td { border-bottom: 0; }
   .login-footer-note { display: none; }
 }
 @media (max-width: 560px) {
+  .it-access-status-form { align-items: stretch; flex-direction: column; }
+  .it-access-profile { align-items: flex-start; flex-direction: column; }
+  .it-access-role { flex-wrap: wrap; }
   .login-topbar { min-height: 38px; font-size: 10px; }
   .login-scene { min-height: 0; padding: 24px 17px; }
   .login-accent-green { right: 4%; width: 7px; }

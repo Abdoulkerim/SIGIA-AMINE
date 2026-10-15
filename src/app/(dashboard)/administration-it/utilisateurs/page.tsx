@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
 
@@ -16,11 +17,11 @@ export default async function ITUsersPage() {
       {error ? <p className="error">Impossible de charger les comptes : {error.message}</p> : null}
       <section className="table-wrap">
         <table>
-          <thead><tr><th>Nom</th><th>E-mail</th><th>Rôle(s)</th><th>État</th><th>Dernière connexion</th></tr></thead>
+          <thead><tr><th>Nom</th><th>E-mail</th><th>Rôle(s)</th><th>État</th><th>Dernière connexion</th><th>Accès</th></tr></thead>
           <tbody>
             {(users ?? []).map((user) => {
               const roles = (assignments ?? []).filter((assignment: any) => assignment.user_id === user.id).map((assignment: any) => assignment.roles?.name).filter(Boolean)
-              return <tr key={user.id}><td>{user.first_name} {user.last_name}</td><td>{user.email ?? '—'}</td><td>{roles.length ? roles.join(', ') : 'Aucun rôle actif'}</td><td><span className="badge">{user.status}</span></td><td>{user.last_login ? new Date(user.last_login).toLocaleString('fr-FR') : 'Jamais'}</td></tr>
+              return <tr key={user.id}><td>{user.first_name} {user.last_name}</td><td>{user.email ?? '—'}</td><td>{roles.length ? roles.join(', ') : 'Aucun rôle actif'}</td><td><span className="badge">{user.status}</span></td><td>{user.last_login ? new Date(user.last_login).toLocaleString('fr-FR') : 'Jamais'}</td><td><Link className="button button-secondary" href={`/administration-it/acces?userId=${user.id}`}>Gérer</Link></td></tr>
             })}
           </tbody>
         </table>

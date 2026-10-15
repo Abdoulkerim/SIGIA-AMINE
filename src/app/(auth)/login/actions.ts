@@ -13,10 +13,21 @@ export async function signIn(formData: FormData) {
   }
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
-  if (error) {
+  if (error || !data.user) {
     redirect(`/login?error=${encodeURIComponent('Identifiants invalides ou compte non configuré.')}`)
+  }
+
+  const { data: profile } = await supabase
+    .from('users')
+    .select('status')
+    .eq('id', data.user.id)
+    .maybeSingle()
+
+  if (profile?.status !== 'active') {
+    await supabase.auth.signOut()
+    redirect(`/login?error=${encodeURIComponent('Ce compte est désactivé. Contactez l’administrateur de l’établissement.')}`)
   }
 
   redirect(next.startsWith('/') ? next : '/')
