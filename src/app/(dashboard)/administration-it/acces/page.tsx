@@ -1,7 +1,15 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
-import { assignUserRole, revokeUserRole, updateUserLoginAccess } from '../access-actions'
+import { assignUserRole, revokeUserRole, updateUserEducationStage, updateUserLoginAccess } from '../access-actions'
+
+const educationStages: Record<string, string> = {
+  maternelle: 'Maternelle',
+  primaire: 'Primaire',
+  secondaire: 'Secondaire',
+  formation: 'Centre de formation',
+  autre: 'Autre',
+}
 
 const pageByPermission: Record<string, { label: string; href: string }[]> = {
   'users.manage': [{ label: 'Utilisateurs', href: '/administration-it/utilisateurs' }],
@@ -52,7 +60,7 @@ export default async function UserAccessPage({ searchParams }: { searchParams: P
   const schoolId = context.profile.school_id
   const supabase = await createClient()
   const [{ data: users, error: usersError }, { data: roles, error: rolesError }] = await Promise.all([
-    supabase.from('users').select('id,first_name,last_name,email,status').eq('school_id', schoolId).order('last_name').limit(300),
+    supabase.from('users').select('id,first_name,last_name,email,status,education_stage').eq('school_id', schoolId).order('last_name').limit(300),
     supabase.from('roles').select('id,name,code,description,role_permissions(permissions(code,name,module,action))').order('name'),
   ])
 
@@ -92,6 +100,7 @@ export default async function UserAccessPage({ searchParams }: { searchParams: P
       {params.error ? <p className="error">{params.error}</p> : null}
       {params.updated === 'role' ? <p className="success">Les rôles de l’utilisateur ont été mis à jour.</p> : null}
       {params.updated === 'status' ? <p className="success">L’accès à la connexion a été mis à jour.</p> : null}
+      {params.updated === 'stage' ? <p className="success">Le cycle scolaire de l’utilisateur a été mis à jour.</p> : null}
       {usersError ? <p className="error">Impossible de charger les utilisateurs : {usersError.message}</p> : null}
       {rolesError ? <p className="error">Impossible de charger les rôles : {rolesError.message}</p> : null}
 
@@ -103,6 +112,7 @@ export default async function UserAccessPage({ searchParams }: { searchParams: P
               <Link className={`it-access-user${selectedUser?.id === user.id ? ' is-selected' : ''}`} href={`/administration-it/acces?userId=${user.id}`} key={user.id}>
                 <span className="it-access-user-avatar" aria-hidden="true">{user.first_name?.[0]}{user.last_name?.[0]}</span>
                 <span className="it-access-user-copy"><strong>{user.first_name} {user.last_name}</strong><small>{user.email ?? 'Sans e-mail'}</small></span>
+                <span className="badge">{user.education_stage ? educationStages[user.education_stage] ?? user.education_stage : 'Sans cycle'}</span>
                 <span className={`it-user-status status-${user.status}`}>{user.status === 'active' ? 'Actif' : user.status === 'suspended' ? 'Suspendu' : 'Inactif'}</span>
               </Link>
             ))}
@@ -118,11 +128,19 @@ export default async function UserAccessPage({ searchParams }: { searchParams: P
                 <span className={`it-user-status status-${selectedUser.status}`}>{selectedUser.status === 'active' ? 'Connexion autorisée' : selectedUser.status === 'suspended' ? 'Connexion suspendue' : 'Compte inactif'}</span>
               </div>
               {selectedUser.id === context.profile.id ? <p className="error" style={{ marginTop: 16 }}>Votre propre compte est protégé : choisissez un autre utilisateur pour modifier ses accès.</p> : (
-                <form action={updateUserLoginAccess} className="it-access-status-form">
-                  <input type="hidden" name="userId" value={selectedUser.id} />
-                  <label className="field" style={{ margin: 0 }}><span className="label">Accès à la connexion</span><select className="select" name="status" defaultValue={selectedUser.status}><option value="active">Autorisé</option><option value="suspended">Suspendu</option><option value="inactive">Désactivé</option></select></label>
-                  <button className="button button-primary" type="submit">Enregistrer l’accès</button>
-                </form>
+                <>
+                  <form action={updateUserLoginAccess} className="it-access-status-form">
+                    <input type="hidden" name="userId" value={selectedUser.id} />
+                    <label className="field" style={{ margin: 0 }}><span className="label">Accès à la connexion</span><select className="select" name="status" defaultValue={selectedUser.status}><option value="active">Autorisé</option><option value="suspended">Suspendu</option><option value="inactive">Désactivé</option></select></label>
+                    <button className="button button-primary" type="submit">Enregistrer l’accès</button>
+                  </form>
+                  <form action={updateUserEducationStage} className="it-access-status-form" style={{ marginTop: 14 }}>
+                    <input type="hidden" name="userId" value={selectedUser.id} />
+                    <label className="field" style={{ margin: 0, flex: 1 }}><span className="label">Données accessibles</span><select className="select" name="educationStage" required defaultValue={selectedUser.education_stage ?? ''}><option value="" disabled>Choisir le cycle autorisé…</option>{Object.entries(educationStages).map(([value, label]) => <option value={value} key={value}>{label}</option>)}<option value="parent">Parent — enfants rattachés uniquement</option></select></label>
+                    <button className="button button-primary" type="submit">Enregistrer le cycle</button>
+                  </form>
+                  <p className="page-subtitle" style={{ marginTop: 8 }}>Un compte ordinaire est limité à un seul cycle. Les parents voient uniquement les dossiers de leurs enfants.</p>
+                </>
               )}
             </section>
 

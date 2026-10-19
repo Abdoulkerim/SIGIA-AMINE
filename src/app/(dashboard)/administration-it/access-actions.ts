@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 
 const uuid = z.string().uuid()
 const statusSchema = z.enum(['active', 'inactive', 'suspended'])
+const educationStageSchema = z.enum(['maternelle', 'primaire', 'secondaire', 'formation', 'autre', 'parent'])
 const protectedRoleCodes = new Set(['super_admin', 'founder', 'it_admin'])
 
 function accessUrl(userId?: string, error?: string, updated?: string) {
@@ -109,4 +110,22 @@ export async function updateUserLoginAccess(formData: FormData) {
 
   invalidateAccessPages()
   redirect(accessUrl(target.data, undefined, 'status'))
+}
+
+export async function updateUserEducationStage(formData: FormData) {
+  const target = uuid.safeParse(formData.get('userId'))
+  const stage = educationStageSchema.safeParse(formData.get('educationStage'))
+  if (!target.success || !stage.success) redirect(accessUrl(undefined, 'Utilisateur ou cycle scolaire invalide.'))
+
+  const manager = await getAccessManager()
+  if (!manager) redirect(accessUrl(target.data, 'Accès non autorisé.'))
+  const { context, schoolId, supabase } = manager
+  if (target.data === context.profile.id) redirect(accessUrl(target.data, 'Vous ne pouvez pas modifier le cycle de votre propre compte.'))
+  if (!await ensureTargetUser(supabase, target.data, schoolId)) redirect(accessUrl(target.data, 'Utilisateur introuvable dans cet établissement.'))
+
+  const { error } = await supabase.from('users').update({ education_stage: stage.data === 'parent' ? null : stage.data }).eq('id', target.data).eq('school_id', schoolId)
+  if (error) redirect(accessUrl(target.data, `Modification du cycle refusée : ${error.message}`))
+
+  invalidateAccessPages()
+  redirect(accessUrl(target.data, undefined, 'stage'))
 }

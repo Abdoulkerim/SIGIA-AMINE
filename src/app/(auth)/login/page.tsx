@@ -74,6 +74,7 @@ export default async function LoginPage({
 
             <form action={signIn} className="login-form">
               <input type="hidden" name="next" value={params.next ?? '/'} />
+              <input type="hidden" name="space" value={selectedSpace?.id ?? ''} />
               <label className="login-field">
                 <span>Adresse e-mail</span>
                 <input className="input" id="email" name="email" type="email" autoComplete="email" placeholder="nom@exemple.com" required />
