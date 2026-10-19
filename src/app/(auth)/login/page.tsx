@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { signIn } from './actions'
 
 const spaces = [
@@ -29,26 +30,39 @@ export default async function LoginPage({
         <div className="login-accent login-accent-green" aria-hidden="true" />
         <div className="login-accent login-accent-orange" aria-hidden="true" />
 
-        <div className="login-decoration login-decoration-left" aria-hidden="true">
-          <span className="login-decoration-spark">✦</span>
-          <span className="login-book"><span /></span>
-          <span className="login-decoration-caption">Apprendre<br />et grandir</span>
+        <div className="login-photo login-photo-left">
+          <Image
+            fill
+            src="/kung-fu-diplomes.png"
+            alt="Deux élèves du Complexe scolaire Al Amine avec leur diplôme de kung-fu wushu"
+            sizes="(max-width: 560px) 0px, (max-width: 1120px) 150px, 22vw"
+            className="login-photo-image"
+          />
         </div>
-        <div className="login-decoration login-decoration-right" aria-hidden="true">
-          <span className="login-decoration-spark">✦</span>
-          <span className="login-book login-book-green"><span /></span>
-          <span className="login-decoration-caption">Ensemble<br />vers la réussite</span>
+        <div className="login-photo login-photo-right">
+          <Image
+            fill
+            src="/kung-fu-groupe-al-amine.png"
+            alt="Groupe de kung-fu devant le Complexe scolaire Al Amine"
+            sizes="(max-width: 560px) 0px, (max-width: 1120px) 170px, 26vw"
+            className="login-photo-image"
+          />
         </div>
-
         <section className="login-content" aria-labelledby="login-heading">
           <div className="login-brand-lockup">
-            <span className="login-brand-icon" aria-hidden="true"><span>س</span></span>
+            <Image
+              className="login-brand-icon"
+              src="/logo-complexe-scolaire-al-amine.jpg"
+              alt="Logo du Complexe scolaire Al Amine"
+              width={64}
+              height={64}
+            />
             <span className="login-brand-name">SIGIA<span>AMINE</span></span>
           </div>
 
           <div className="login-heading-block">
             <p className="login-eyebrow">Bienvenue dans votre espace</p>
-            <h1 id="login-heading">Gestion des établissements scolaires</h1>
+            <h1 id="login-heading">SYSTÈME INTELLIGENT DE GESTION INTÉGRÉ AL AMINE</h1>
             <p className="login-tagline">La réussite de chaque élève, au cœur de nos priorités.</p>
             {selectedSpace ? <span className="login-space-label">Espace {selectedSpace.label}</span> : null}
           </div>
