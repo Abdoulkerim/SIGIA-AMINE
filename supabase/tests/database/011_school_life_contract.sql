@@ -35,12 +35,12 @@ select has_function('public','create_student_followup'::name);
 select has_function('public','create_student_reward'::name);
 select has_function('public','get_student_school_life_summary'::name);
 
-select policies_are('public','attendance_sessions',ARRAY['attendance_sessions_delete_step14','attendance_sessions_insert_step14','attendance_sessions_select_step14','attendance_sessions_update_step14']);
-select policies_are('public','attendance_records',ARRAY['attendance_records_delete_step14','attendance_records_insert_step14','attendance_records_select_step14','attendance_records_update_step14']);
-select policies_are('public','absence_justifications',ARRAY['absence_justifications_delete_step14','absence_justifications_insert_step14','absence_justifications_select_step14','absence_justifications_update_step14']);
-select policies_are('public','discipline_events',ARRAY['discipline_events_delete_step14','discipline_events_insert_step14','discipline_events_select_step14','discipline_events_update_step14']);
-select policies_are('public','student_followups',ARRAY['student_followups_delete_step14','student_followups_insert_step14','student_followups_select_step14','student_followups_update_step14']);
-select policies_are('public','student_rewards',ARRAY['student_rewards_delete_step14','student_rewards_insert_step14','student_rewards_select_step14','student_rewards_update_step14']);
+select policies_are('public','attendance_sessions',ARRAY['attendance_sessions_delete_step14','attendance_sessions_insert_step14','attendance_sessions_select_step14','attendance_sessions_update_step14','education_stage_boundary']);
+select policies_are('public','attendance_records',ARRAY['attendance_records_delete_step14','attendance_records_insert_step14','attendance_records_select_step14','attendance_records_update_step14','education_stage_boundary']);
+select policies_are('public','absence_justifications',ARRAY['absence_justifications_delete_step14','absence_justifications_insert_step14','absence_justifications_select_step14','absence_justifications_update_step14','education_stage_boundary']);
+select policies_are('public','discipline_events',ARRAY['discipline_events_delete_step14','discipline_events_insert_step14','discipline_events_select_step14','discipline_events_update_step14','education_stage_boundary']);
+select policies_are('public','student_followups',ARRAY['student_followups_delete_step14','student_followups_insert_step14','student_followups_select_step14','student_followups_update_step14','education_stage_boundary']);
+select policies_are('public','student_rewards',ARRAY['student_rewards_delete_step14','student_rewards_insert_step14','student_rewards_select_step14','student_rewards_update_step14','education_stage_boundary']);
 
 select * from finish();
 rollback;

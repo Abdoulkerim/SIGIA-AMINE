@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import { signIn } from './actions'
+import { PasswordField } from './password-field'
 
 const spaces = [
   { id: 'maternelle', label: 'Maternelle' },
@@ -75,14 +76,14 @@ export default async function LoginPage({
             <form action={signIn} className="login-form">
               <input type="hidden" name="next" value={params.next ?? '/'} />
               <input type="hidden" name="space" value={selectedSpace?.id ?? ''} />
-              <label className="login-field">
-                <span>Adresse e-mail</span>
-                <input className="input" id="email" name="email" type="email" autoComplete="email" placeholder="nom@exemple.com" required />
-              </label>
-              <label className="login-field">
-                <span>Mot de passe</span>
-                <input className="input" id="password" name="password" type="password" autoComplete="current-password" placeholder="Votre mot de passe" required />
-              </label>
+              <div className="login-field">
+                <label htmlFor="identifier">Nom d’utilisateur ou adresse e-mail</label>
+                <input className="input" id="identifier" name="identifier" type="text" autoComplete="username" placeholder="Votre nom d’utilisateur ou e-mail" required />
+              </div>
+              <div className="login-field">
+                <label htmlFor="password">Mot de passe</label>
+                <PasswordField />
+              </div>
               <button className="login-submit" type="submit">Se connecter <span aria-hidden="true">→</span></button>
             </form>
             <p className="login-secure-note"><span aria-hidden="true">●</span> Connexion sécurisée</p>

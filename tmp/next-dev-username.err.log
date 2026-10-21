@@ -1,0 +1,11 @@
+[browser] Image with src "/kung-fu-diplomes.png" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading
+[browser] Image with src "/kung-fu-diplomes.png" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading
+memory allocation of memory allocation of 20971524194304memory allocation of memory allocation of 4194304 bytes failed
+skipping backtrace printing to avoid potential recursion
+1048576 bytes failed
+skipping backtrace printing to avoid potential recursion
+ bytes failed
+skipping backtrace printing to avoid potential recursion
+ bytes failed

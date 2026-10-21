@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
 import { updateClass } from '../../academic-actions'
+import { ReportActions } from '@/components/reports/report-actions'
 
 export default async function ClassDetailPage({
   params,
@@ -25,6 +26,8 @@ export default async function ClassDetailPage({
     return <main className="page"><p className="error">Classe introuvable.</p><Link className="button button-secondary" href="/administration/classes">Retour</Link></main>
   }
 
+  const { data: enrollments } = await supabase.from('enrollments').select('student_id,registration_number,residence_type,students(student_number,first_name,last_name,gender)').eq('school_id', context.profile.school_id).eq('school_year_id', item.school_year_id).eq('class_id', item.id).eq('status','enrolled').order('registration_number')
+
   return (
     <main className="page">
       <div className="page-header">
@@ -37,6 +40,8 @@ export default async function ClassDetailPage({
 
       {query.updated ? <p className="success">Classe modifiée.</p> : null}
       {query.error ? <p className="error">{query.error}</p> : null}
+      <ReportActions title={`Élèves de la classe ${item.name}`} fileName={`eleves-${item.code}`} headers={['Matricule', 'Nom', 'Prénom', 'Genre', 'Régime', 'N° inscription']} rows={(enrollments ?? []).map((row: any) => [row.students?.student_number, row.students?.last_name, row.students?.first_name, row.students?.gender, row.residence_type, row.registration_number])} />
+      <section className="card" style={{marginBottom:20}}><h2 style={{marginTop:0}}>Élèves inscrits — {enrollments?.length ?? 0}</h2><div className="table-wrap"><table><thead><tr><th>Matricule</th><th>Nom</th><th>Prénom</th><th>Genre</th><th>Régime</th></tr></thead><tbody>{(enrollments ?? []).map((row: any) => <tr key={row.student_id}><td>{row.students?.student_number ?? '—'}</td><td>{row.students?.last_name ?? '—'}</td><td>{row.students?.first_name ?? '—'}</td><td>{row.students?.gender ?? '—'}</td><td>{row.residence_type}</td></tr>)}</tbody></table></div>{!enrollments?.length ? <p className="empty">Aucun élève inscrit dans cette classe pour cette année scolaire.</p> : null}</section>
       <section className="card">
         <form action={updateClass} className="grid grid-2">
           <input type="hidden" name="id" value={item.id} />

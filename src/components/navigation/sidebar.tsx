@@ -225,6 +225,8 @@ const groups: NavGroup[] = [
     items: [
       { label: 'Outils IT', href: '/administration-it', icon: Settings },
       { label: 'Utilisateurs', href: '/administration-it/utilisateurs', icon: UsersRound },
+      { label: 'Créer un compte', href: '/administration-it/utilisateurs/nouveau', icon: UsersRound },
+      { label: 'Cartes scolaires', href: '/administration-it/cartes', icon: Contact },
       { label: 'Accès utilisateurs', href: '/administration-it/acces', icon: ShieldCheck },
       { label: 'Rôles et permissions', href: '/administration-it/roles', icon: KeyRound },
       { label: 'Journal d’audit', href: '/administration-it/audit', icon: ScrollText },

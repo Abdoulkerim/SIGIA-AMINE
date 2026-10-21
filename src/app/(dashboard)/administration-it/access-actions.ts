@@ -120,11 +120,28 @@ export async function updateUserEducationStage(formData: FormData) {
   const manager = await getAccessManager()
   if (!manager) redirect(accessUrl(target.data, 'Accès non autorisé.'))
   const { context, schoolId, supabase } = manager
-  if (target.data === context.profile.id) redirect(accessUrl(target.data, 'Vous ne pouvez pas modifier le cycle de votre propre compte.'))
-  if (!await ensureTargetUser(supabase, target.data, schoolId)) redirect(accessUrl(target.data, 'Utilisateur introuvable dans cet établissement.'))
+  const isOwnAccount = target.data === context.profile.id
+  const { data: targetUser } = await supabase.from('users')
+    .select('id,education_stage')
+    .eq('id', target.data)
+    .eq('school_id', schoolId)
+    .maybeSingle()
+  if (!targetUser) redirect(accessUrl(target.data, 'Utilisateur introuvable dans cet établissement.'))
+  if (isOwnAccount && targetUser.education_stage !== null) {
+    redirect(accessUrl(target.data, 'Le cycle de votre compte ne peut être modifié par vous-meme.'))
+  }
+  if (isOwnAccount && stage.data === 'parent') {
+    redirect(accessUrl(target.data, 'Attribuez un cycle scolaire à votre compte fondateur.'))
+  }
 
-  const { error } = await supabase.from('users').update({ education_stage: stage.data === 'parent' ? null : stage.data }).eq('id', target.data).eq('school_id', schoolId)
-  if (error) redirect(accessUrl(target.data, `Modification du cycle refusée : ${error.message}`))
+  let update = supabase.from('users')
+    .update({ education_stage: stage.data === 'parent' ? null : stage.data })
+    .eq('id', target.data)
+    .eq('school_id', schoolId)
+  if (isOwnAccount) update = update.is('education_stage', null)
+  const { data: updatedUser, error } = await update.select('id').maybeSingle()
+  if (error) redirect(accessUrl(target.data, 'Modification du cycle refusée : ' + error.message))
+  if (!updatedUser) redirect(accessUrl(target.data, 'Le cycle a deja ete attribué ou le compte est introuvable.'))
 
   invalidateAccessPages()
   redirect(accessUrl(target.data, undefined, 'stage'))

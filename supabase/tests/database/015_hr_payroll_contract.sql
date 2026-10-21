@@ -46,10 +46,10 @@ select has_index('public','employee_leaves','idx_employee_leaves_school_dates_st
 select has_index('public','payroll_periods','idx_payroll_periods_school_dates','index periodes paie');
 select has_index('public','payroll_items','idx_payroll_items_period_employee_status','index lignes paie');
 
-select policies_are('public','payroll_periods',array['payroll_periods_select_026'],'RLS periodes paie');
+select policies_are('public','payroll_periods',array['education_stage_boundary','payroll_periods_select_026'],'RLS periodes paie');
 select policies_are('public','payroll_items',array['payroll_items_select_026'],'RLS lignes paie');
-select policies_are('public','employee_leaves',array['employee_leaves_select_026'],'RLS conges');
-select policies_are('public','employee_attendance',array['employee_attendance_select_026'],'RLS presence personnel');
+select policies_are('public','employee_leaves',array['education_stage_boundary','employee_leaves_select_026'],'RLS conges');
+select policies_are('public','employee_attendance',array['education_stage_boundary','employee_attendance_select_026'],'RLS presence personnel');
 
 select ok((select not exists(
   select 1 from information_schema.role_table_grants

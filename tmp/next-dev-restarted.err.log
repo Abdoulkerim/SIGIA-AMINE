@@ -1,0 +1,96 @@
+[browser] Image with src "/kung-fu-diplomes.png" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading
+[browser] Image with src "/kung-fu-diplomes.png" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+      <LoadingBoundary name="login/" loading={null}>
+        <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>
+          <RedirectBoundary>
+            <RedirectErrorBoundary router={{...}}>
+              <InnerLayoutRouter url="/login" tree={[...]} params={{}} cacheNode={{rsc:{...}, ...}} segmentPath={[...]} ...>
+                <SegmentViewNode type="page" pagePath="(auth)/log...">
+                  <SegmentTrieNode>
+                  <LoginPage>
+                    <main className="login-page">
+                      <div>
+                      <div className="login-scene">
+                        <div>
+                        <div>
+                        <div>
+                        <div>
+                        <div>
+                        <div>
+                        <section className="login-content" aria-labelledby="login-heading">
+                          <div>
+                          <div>
+                          <div className="login-form..." id="connexion">
+                            <h2>
+                            <p>
+                            <form action={function signIn} className="login-form">
+                              <input
+                                type="hidden"
+                                name="next"
+                                value="/"
+-                               wfd-id="id1"
+                              >
+                              <input
+                                type="hidden"
+                                name="space"
+                                value=""
+-                               wfd-id="id2"
+                              >
+                              <label className="login-field">
+                                <span>
+                                <input
+                                  className="input"
+                                  id="email"
+                                  name="email"
+                                  type="email"
+                                  autoComplete="email"
+                                  placeholder="nom@exemple.com"
+                                  required={true}
+-                                 wfd-id="id3"
+                                >
+                              <label className="login-field">
+                                <span>
+                                <input
+                                  className="input"
+                                  id="password"
+                                  name="password"
+                                  type="password"
+                                  autoComplete="current-password"
+                                  placeholder="Votre mot de passe"
+                                  required={true}
+-                                 wfd-id="id4"
+                                >
+                              ...
+                            ...
+                      ...
+                ...
+              ...
+    ...
+ 
+⚠ Fast Refresh had to perform a full reload when ./node_modules/next/dist/client/image-component.js changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+⚠ Fast Refresh had to perform a full reload when ./node_modules/next/dist/client/image-component.js changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+⚠ Fast Refresh had to perform a full reload when ./node_modules/next/dist/client/image-component.js changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+⨯ Error: The destination stream closed early.
+    at ignore-listed frames {
+  digest: '1955804538'
+}
+[browser] Image with src "/kung-fu-diplomes.png" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading
+[browser] Image with src "/kung-fu-diplomes.png" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading

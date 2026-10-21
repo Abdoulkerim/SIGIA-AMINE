@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { Sidebar } from '@/components/navigation/sidebar'
 import { LogoutButton } from '@/components/auth/logout-button'
+import Link from 'next/link'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
 
 export default async function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -27,6 +28,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
               <div className="user-name">{displayName}</div>
               <div className="user-role">{role?.name ?? 'Utilisateur'}</div>
             </div>
+            <Link className="button button-secondary" href="/mon-compte">Mon compte</Link>
             <LogoutButton />
           </div>
         </header>

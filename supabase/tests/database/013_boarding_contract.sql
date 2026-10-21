@@ -34,13 +34,13 @@ select ok(exists(select 1 from pg_constraint where conrelid='public.boarding_roo
 select ok(exists(select 1 from pg_constraint where conrelid='public.boarding_beds'::regclass and conname='boarding_beds_status_ck' and contype='c'),'bed status constrained');
 select ok(exists(select 1 from pg_constraint where conrelid='public.boarding_assignments'::regclass and conname='boarding_assignments_status_ck' and contype='c'),'assignment status constrained');
 
-select policies_are('public','boarding_buildings',array['boarding_buildings_select_secure'],'building RLS is read-only through table API');
+select policies_are('public','boarding_buildings',array['boarding_buildings_select_secure','education_stage_boundary'],'building RLS is read-only through table API');
 select policies_are('public','boarding_dormitories',array['boarding_dormitories_select_secure'],'dormitory RLS is read-only through table API');
 select policies_are('public','boarding_rooms',array['boarding_rooms_select_secure'],'room RLS is read-only through table API');
 select policies_are('public','boarding_beds',array['boarding_beds_select_secure'],'bed RLS is read-only through table API');
-select policies_are('public','boarding_assignments',array['boarding_assignments_select_secure'],'assignment RLS is read-only through table API');
-select policies_are('public','boarding_movements',array['boarding_movements_select_secure'],'movement RLS is read-only through table API');
-select policies_are('public','boarding_attendance',array['boarding_attendance_select_secure'],'attendance RLS is read-only through table API');
+select policies_are('public','boarding_assignments',array['boarding_assignments_select_secure','education_stage_boundary'],'assignment RLS is read-only through table API');
+select policies_are('public','boarding_movements',array['boarding_movements_select_secure','education_stage_boundary'],'movement RLS is read-only through table API');
+select policies_are('public','boarding_attendance',array['boarding_attendance_select_secure','education_stage_boundary'],'attendance RLS is read-only through table API');
 
 select ok((select not exists(
   select 1 from information_schema.role_table_grants

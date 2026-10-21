@@ -25,10 +25,10 @@ select has_index('public','fee_types','ux_fee_types_school_lower_code', 'fee typ
 select has_index('public','payments','ix_payments_school_date', 'payment date index exists');
 select has_index('public','expenses','ix_expenses_school_date_status', 'expense date/status index exists');
 select has_index('public','cash_transactions','ix_cash_transactions_account_date', 'cash transaction index exists');
-select policies_are('public','invoices', ARRAY['invoices_select_scoped_v2'], 'invoice RLS is read-only through table API');
-select policies_are('public','payments', ARRAY['payments_select_scoped_v2'], 'payment RLS is read-only through table API');
-select policies_are('public','cash_transactions', ARRAY['cash_transactions_select_scoped'], 'cash transactions are read-only through table API');
-select policies_are('public','expenses', ARRAY['expenses_select_scoped'], 'expenses are read-only through table API');
+select policies_are('public','invoices', ARRAY['education_stage_boundary','invoices_select_scoped_v2'], 'invoice RLS is read-only through table API');
+select policies_are('public','payments', ARRAY['education_stage_boundary','payments_select_scoped_v2'], 'payment RLS is read-only through table API');
+select policies_are('public','cash_transactions', ARRAY['cash_transactions_select_scoped','education_stage_boundary'], 'cash transactions are read-only through table API');
+select policies_are('public','expenses', ARRAY['education_stage_boundary','expenses_select_scoped'], 'expenses are read-only through table API');
 select has_column('public','invoice_items','line_total', 'invoice item line total column exists');
 select ok(exists(select 1 from pg_constraint where conrelid='public.cash_accounts'::regclass and conname='cash_accounts_type_ck' and contype='c'),'cash account types constrained');
 

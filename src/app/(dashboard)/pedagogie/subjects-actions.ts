@@ -10,7 +10,6 @@ const subjectSchema = z.object({
   code: z.string().trim().min(1).max(50),
   name: z.string().trim().min(1).max(120),
   domain: z.string().trim().min(1).max(80),
-  coefficient: z.coerce.number().positive(),
   weeklyHours: z.coerce.number().positive().optional(),
   description: z.string().trim().max(5000).optional(),
 })
@@ -24,7 +23,6 @@ export async function createSubject(formData: FormData) {
     code: formData.get('code'),
     name: formData.get('name'),
     domain: formData.get('domain'),
-    coefficient: formData.get('coefficient'),
     weeklyHours: formData.get('weeklyHours') || undefined,
     description: formData.get('description') || undefined,
   })
@@ -35,7 +33,8 @@ export async function createSubject(formData: FormData) {
     p_code: parsed.data.code,
     p_name: parsed.data.name,
     p_domain: parsed.data.domain,
-    p_coefficient: parsed.data.coefficient,
+    // Legacy catalogue column retained for database compatibility; weighting belongs to each class assignment.
+    p_coefficient: 1,
     p_weekly_hours: parsed.data.weeklyHours ?? null,
     p_description: parsed.data.description ?? null,
   })
@@ -51,7 +50,6 @@ export async function updateSubject(formData: FormData) {
     code: formData.get('code'),
     name: formData.get('name'),
     domain: formData.get('domain'),
-    coefficient: formData.get('coefficient'),
     weeklyHours: formData.get('weeklyHours') || undefined,
     description: formData.get('description') || undefined,
   })
@@ -63,7 +61,8 @@ export async function updateSubject(formData: FormData) {
     p_code: parsed.data.code,
     p_name: parsed.data.name,
     p_domain: parsed.data.domain,
-    p_coefficient: parsed.data.coefficient,
+    // Legacy catalogue column retained for database compatibility; weighting belongs to each class assignment.
+    p_coefficient: 1,
     p_weekly_hours: parsed.data.weeklyHours ?? null,
     p_description: parsed.data.description ?? null,
   })
@@ -96,7 +95,7 @@ const assignmentSchema = z.object({
   schoolYearId: z.string().uuid(),
   classId: z.string().uuid(),
   subjectId: z.string().uuid(),
-  coefficientOverride: z.coerce.number().positive().optional(),
+  coefficientOverride: z.coerce.number().positive(),
   weeklyHoursOverride: z.coerce.number().positive().optional(),
   isRequired: z.coerce.boolean(),
 })
@@ -106,7 +105,7 @@ export async function assignSubjectToClass(formData: FormData) {
     schoolYearId: formData.get('schoolYearId'),
     classId: formData.get('classId'),
     subjectId: formData.get('subjectId'),
-    coefficientOverride: formData.get('coefficientOverride') || undefined,
+    coefficientOverride: formData.get('coefficientOverride'),
     weeklyHoursOverride: formData.get('weeklyHoursOverride') || undefined,
     isRequired: formData.get('isRequired') === 'true',
   })

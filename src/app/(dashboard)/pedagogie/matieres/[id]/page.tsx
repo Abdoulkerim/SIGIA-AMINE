@@ -29,7 +29,7 @@ export default async function SubjectDetailPage({
   const supabase = await createClient()
 
   const [{ data: subject, error }, { data: years }, { data: classes }, { data: assignments }] = await Promise.all([
-    supabase.from('subjects').select('id, code, name, domain, coefficient, weekly_hours, description, is_active').eq('id', id).eq('school_id', context.profile.school_id).single(),
+    supabase.from('subjects').select('id, code, name, domain, weekly_hours, description, is_active').eq('id', id).eq('school_id', context.profile.school_id).single(),
     supabase.from('school_years').select('id, name, is_current').eq('school_id', context.profile.school_id).order('start_date', { ascending: false }),
     supabase.from('classes').select('id, name, code, school_year_id').eq('school_id', context.profile.school_id).eq('is_active', true).order('name'),
     supabase.from('subject_class_assignments').select('id, school_year_id, class_id, coefficient_override, weekly_hours_override, is_required, is_active, school_years(name), classes(name,code)').eq('subject_id', id).eq('school_id', context.profile.school_id).order('is_active', { ascending: false }),
@@ -63,7 +63,6 @@ export default async function SubjectDetailPage({
               {domains.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </div>
-          <div className="field"><label className="label" htmlFor="coefficient">Coefficient *</label><input className="input" id="coefficient" name="coefficient" type="number" min="0.01" step="0.01" defaultValue={subject.coefficient} required /></div>
           <div className="field"><label className="label" htmlFor="weeklyHours">H/semaine</label><input className="input" id="weeklyHours" name="weeklyHours" type="number" min="0.01" step="0.25" defaultValue={subject.weekly_hours ?? ''} /></div>
           <div className="field" style={{ gridColumn: '1 / -1' }}><label className="label" htmlFor="description">Description</label><textarea className="input" id="description" name="description" rows={4} defaultValue={subject.description ?? ''} /></div>
           <div><button className="button button-primary" type="submit">Enregistrer</button></div>
@@ -73,9 +72,9 @@ export default async function SubjectDetailPage({
       <section className="card" style={{ marginBottom: 16 }}>
         <h2>Rattacher la matière à une classe et une année</h2>
         <p>Les coefficients et volumes horaires peuvent être adaptés pour chaque classe.</p>
+        <p className="field-hint">Pour modifier une association, choisissez la même année et la même classe, saisissez le nouveau coefficient, puis réenregistrez.</p>
         <SubjectClassAssignmentForm
           subjectId={subject.id}
-          coefficient={subject.coefficient}
           weeklyHours={subject.weekly_hours}
           years={years ?? []}
           classes={classes ?? []}
@@ -92,7 +91,7 @@ export default async function SubjectDetailPage({
                 <tr key={a.id}>
                   <td>{a.school_years?.name ?? '—'}</td>
                   <td>{a.classes?.name ?? '—'} {a.classes?.code ? `(${a.classes.code})` : ''}</td>
-                  <td>{a.coefficient_override ?? subject.coefficient}</td>
+                  <td>{a.coefficient_override}</td>
                   <td>{a.weekly_hours_override ?? subject.weekly_hours ?? '—'}</td>
                   <td>{a.is_required ? 'Oui' : 'Non'}</td>
                   <td><span className="badge">{a.is_active ? 'Active' : 'Inactive'}</span></td>

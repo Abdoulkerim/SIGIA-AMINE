@@ -25,7 +25,8 @@ select policies_are(
   ARRAY[
     'students_insert_staff',
     'students_select_scoped',
-    'students_update_staff'
+    'students_update_staff',
+    'education_stage_boundary'
   ],
   'RLS students : policies attendues'
 );
@@ -37,7 +38,8 @@ select policies_are(
     'documents_select_scoped',
     'documents_insert_secure',
     'documents_update_secure',
-    'documents_delete_secure'
+    'documents_delete_secure',
+    'education_stage_boundary'
   ],
   'RLS documents : policies attendues'
 );
@@ -47,7 +49,8 @@ select policies_are(
   'enrollment_history',
   ARRAY[
     'enrollment_history_secure',
-    'enrollment_history_manage'
+    'enrollment_history_manage',
+    'education_stage_boundary'
   ],
   'RLS historique inscription : policies attendues'
 );

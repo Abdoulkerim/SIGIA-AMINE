@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
 import { toggleSubject } from '../subjects-actions'
+import { ReportActions } from '@/components/reports/report-actions'
 
 export default async function SubjectsPage({
   searchParams,
@@ -15,7 +16,7 @@ export default async function SubjectsPage({
 
   const { data: subjects, error } = await supabase
     .from('subjects')
-    .select('id, code, name, domain, coefficient, weekly_hours, is_active')
+    .select('id, code, name, domain, weekly_hours, is_active')
     .eq('school_id', context.profile.school_id)
     .order('domain')
     .order('name')
@@ -34,6 +35,8 @@ export default async function SubjectsPage({
       {params.error ? <p className="error">{params.error}</p> : null}
       {error ? <p className="error">Erreur de lecture : {error.message}</p> : null}
 
+      <ReportActions title="Liste des matières" fileName="liste-matieres" headers={['Code', 'Matière', 'Domaine', 'Heures par semaine', 'Statut']} rows={(subjects ?? []).map((subject) => [subject.code, subject.name, subject.domain, subject.weekly_hours, subject.is_active ? 'Active' : 'Archivée'])} />
+
       {!subjects?.length ? (
         <section className="card empty">
           <h2 style={{ marginTop: 0, color: 'var(--text)' }}>Aucune matière configurée</h2>
@@ -44,14 +47,13 @@ export default async function SubjectsPage({
         <section className="card">
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Code</th><th>Matière</th><th>Domaine</th><th>Coef.</th><th>H/semaine</th><th>Statut</th><th></th></tr></thead>
+              <thead><tr><th>Code</th><th>Matière</th><th>Domaine</th><th>H/semaine</th><th>Statut</th><th></th></tr></thead>
               <tbody>
                 {subjects.map((subject) => (
                   <tr key={subject.id}>
                     <td>{subject.code}</td>
                     <td>{subject.name}</td>
                     <td>{subject.domain}</td>
-                    <td>{subject.coefficient}</td>
                     <td>{subject.weekly_hours ?? '—'}</td>
                     <td><span className="badge">{subject.is_active ? 'Active' : 'Archivée'}</span></td>
                     <td className="actions">

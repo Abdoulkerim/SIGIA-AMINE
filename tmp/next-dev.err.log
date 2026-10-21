@@ -1,0 +1,10 @@
+⚠ Port 3000 is in use by an unknown process, using available port 3001 instead.
+⨯ Another next dev server is already running.
+
+- Local:        http://127.0.0.1:3000
+- PID:          13228
+- Dir:          C:\Users\HP\Documents\Projet SIGIA-AMINE\SIGIA-AMINE
+- Log:          .next\dev\logs\next-development.log
+
+You can access the existing server at http://127.0.0.1:3000,
+or run taskkill /PID 13228 /F to stop it and start a new one.

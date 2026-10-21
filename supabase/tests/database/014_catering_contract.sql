@@ -27,11 +27,11 @@ select has_index('public','catering_consumptions','ix_catering_consumptions_scho
 select ok(exists(select 1 from pg_constraint where conrelid='public.menus'::regclass and conname='menus_status_ck' and contype='c'),'statut menu contrôlé');
 select ok(exists(select 1 from pg_constraint where conrelid='public.meal_service_records'::regclass and conname='meal_service_records_status_ck' and contype='c'),'statut service contrôlé');
 select ok(exists(select 1 from pg_constraint where conrelid='public.meal_attendance'::regclass and conname='meal_attendance_qty_ck' and contype='c'),'quantité repas contrôlée');
-select policies_are('public','menus',array['menus_select_secure'],'menus : lecture via RBAC');
+select policies_are('public','menus',array['education_stage_boundary','menus_select_secure'],'menus : lecture via RBAC');
 select policies_are('public','menu_items',array['menu_items_select_secure'],'lignes de menu : lecture via RBAC');
-select policies_are('public','meal_service_records',array['meal_service_records_select_secure'],'service repas : lecture via RBAC');
-select policies_are('public','meal_attendance',array['meal_attendance_select_secure'],'présence repas : lecture sécurisée');
-select policies_are('public','catering_menu_ingredients',array['catering_ingredients_select_secure'],'ingredients : lecture sécurisée');
+select policies_are('public','meal_service_records',array['education_stage_boundary','meal_service_records_select_secure'],'service repas : lecture via RBAC');
+select policies_are('public','meal_attendance',array['education_stage_boundary','meal_attendance_select_secure'],'présence repas : lecture sécurisée');
+select policies_are('public','catering_menu_ingredients',array['catering_ingredients_select_secure','education_stage_boundary'],'ingredients : lecture sécurisée');
 select ok((select not exists(select 1 from information_schema.role_table_grants where grantee='authenticated' and table_schema='public' and table_name='meal_attendance' and privilege_type='INSERT')),'pas d insertion directe présences');
 select ok((select not exists(select 1 from information_schema.role_table_grants where grantee='authenticated' and table_schema='public' and table_name='meal_service_records' and privilege_type='INSERT')),'pas d insertion directe services');
 select ok((select not exists(select 1 from information_schema.role_table_grants where grantee='authenticated' and table_schema='public' and table_name='catering_consumptions' and privilege_type='INSERT')),'pas d insertion directe consommations');

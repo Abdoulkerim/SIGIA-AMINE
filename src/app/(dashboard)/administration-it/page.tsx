@@ -5,6 +5,8 @@ import { getCurrentUserContext } from '@/lib/auth/current-user'
 
 const tools = [
   { title: 'Utilisateurs', description: 'Consulter les comptes et leurs rôles actifs.', href: '/administration-it/utilisateurs', icon: UsersRound, color: '#2563eb' },
+  { title: 'Créer un compte', description: 'Créer un identifiant, choisir son cycle et son rôle.', href: '/administration-it/utilisateurs/nouveau', icon: UsersRound, color: '#0891b2' },
+  { title: 'Cartes scolaires', description: 'Générer, exporter et imprimer les cartes des élèves et employés.', href: '/administration-it/cartes', icon: KeyRound, color: '#0f766e' },
   { title: 'Accès utilisateurs', description: 'Attribuer les privilèges, gérer les connexions et voir les pages accessibles.', href: '/administration-it/acces', icon: ShieldCheck, color: '#b45309' },
   { title: 'Rôles et permissions', description: 'Vérifier les rôles et leurs autorisations.', href: '/administration-it/roles', icon: KeyRound, color: '#7c3aed' },
   { title: 'Journal d’audit', description: 'Suivre les opérations enregistrées par le système.', href: '/administration-it/audit', icon: ScrollText, color: '#c2410c' },

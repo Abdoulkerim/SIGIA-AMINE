@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
+import { ReportActions } from '@/components/reports/report-actions'
 
 const labels: Record<string, string> = {
   pending: 'En préparation',
@@ -76,6 +77,8 @@ export default async function EnrollmentsPage({
           <Link className="button button-primary" href="/administration/inscriptions/nouveau">Créer une inscription</Link>
         </section>
       ) : (
+        <>
+        <ReportActions title="Liste des inscriptions" fileName="liste-inscriptions" headers={['Référence', 'Matricule', 'Élève', 'Année scolaire', 'Niveau', 'Classe', 'Régime', 'Type', 'Statut']} rows={rows.map((row: any) => [row.registration_number, row.students?.student_number, row.students ? `${row.students.last_name} ${row.students.first_name}` : '—', row.school_years?.name, row.levels?.name ?? 'À définir', row.classes?.name ?? 'À affecter', row.residence_type, row.is_reenrollment ? 'Réinscription' : 'Inscription', labels[row.status] ?? row.status])} />
         <section className="table-wrap">
           <table>
             <thead><tr><th>Référence</th><th>Élève</th><th>Année</th><th>Niveau</th><th>Classe</th><th>Régime</th><th>Type</th><th>Statut</th><th></th></tr></thead>
@@ -96,6 +99,7 @@ export default async function EnrollmentsPage({
             </tbody>
           </table>
         </section>
+        </>
       )}
     </main>
   )

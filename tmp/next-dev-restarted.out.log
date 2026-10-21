@@ -1,0 +1,58 @@
+▲ Next.js 16.3.6 (Turbopack)
+- Local:         http://127.0.0.1:3000
+- Network:       http://127.0.0.1:3000
+- Environments: .env.local
+✓ Ready in 765ms
+✓ Running next.config.ts took 91ms
+Creating turbopack project {
+  dir: 'C:\\Users\\HP\\Documents\\Projet SIGIA-AMINE\\SIGIA-AMINE',
+  testMode: true
+}
+
+○ Compiling /login ...
+ GET /login 200 in 5.5s (next.js: 4.1s, application-code: 1320ms)
+ GET /administration-it/utilisateurs/nouveau 307 in 3.2s (next.js: 1058ms, application-code: 2.1s)
+ GET /administration-it/cartes/eleves 307 in 198ms (next.js: 76ms, application-code: 122ms)
+ GET /administration-it/cartes/employes 307 in 135ms (next.js: 10ms, application-code: 125ms)
+ GET /administration-it/cartes/employes 200 in 8.1s (next.js: 3.6s, application-code: 4.5s)
+ GET / 307 in 545ms (next.js: 322ms, application-code: 223ms)
+ GET /dashboard 307 in 310ms (next.js: 147ms, application-code: 163ms)
+ GET /login 200 in 245ms (next.js: 91ms, application-code: 154ms)
+ GET /login 200 in 366ms (next.js: 80ms, application-code: 286ms)
+ GET / 200 in 131ms (next.js: 21ms, application-code: 110ms)
+ POST /login 200 in 41s (next.js: 8ms, application-code: 41s)
+  └─ ƒ signIn({}) in 41055ms src/app/(auth)/login/actions.ts
+ GET /dashboard 200 in 1526ms (next.js: 15ms, application-code: 1511ms)
+ GET /dashboard 200 in 942ms (next.js: 15ms, application-code: 927ms)
+ GET /administration-it/utilisateurs/nouveau 200 in 1229ms (next.js: 178ms, application-code: 1052ms)
+ GET /administration-it/cartes 200 in 305ms (next.js: 217ms, application-code: 88ms)
+ GET /administration-it/cartes/eleves 200 in 1516ms (next.js: 107ms, application-code: 1409ms)
+ GET /administration-it/cartes 200 in 52ms (next.js: 11ms, application-code: 41ms)
+ GET /administration-it/cartes/eleves 200 in 5.9s (next.js: 9ms, application-code: 5.9s)
+ GET /login 200 in 183ms (next.js: 24ms, application-code: 159ms)
+✓ Compiled in 3.8s
+ GET /login 200 in 952ms (next.js: 364ms, application-code: 588ms)
+ GET /login 200 in 921ms (next.js: 503ms, application-code: 417ms)
+✓ Compiled in 1907ms
+ GET /login 200 in 81ms (next.js: 13ms, application-code: 68ms)
+ GET /login 200 in 505ms (next.js: 132ms, application-code: 373ms)
+ GET /login 200 in 477ms (next.js: 244ms, application-code: 233ms)
+ GET /login 200 in 163ms (next.js: 9ms, application-code: 154ms)
+ GET /login 200 in 331ms (next.js: 38ms, application-code: 293ms)
+ GET /login 200 in 316ms (next.js: 80ms, application-code: 236ms)
+ GET /login 200 in 161ms (next.js: 23ms, application-code: 139ms)
+ GET /login 200 in 170ms (next.js: 10ms, application-code: 160ms)
+ GET /login 200 in 169ms (next.js: 12ms, application-code: 158ms)
+ GET /login 200 in 102ms (next.js: 12ms, application-code: 90ms)
+ GET /login 200 in 167ms (next.js: 25ms, application-code: 143ms)
+ GET /login 200 in 169ms (next.js: 58ms, application-code: 111ms)
+ GET /login 200 in 66ms (next.js: 12ms, application-code: 54ms)
+  Reload env: .env.local
+ GET /login 200 in 1321ms (next.js: 759ms, application-code: 562ms)
+ GET /login 200 in 3.3s (next.js: 1215ms, application-code: 2.1s)
+ GET /login 200 in 229ms (next.js: 57ms, application-code: 171ms)
+ GET /login 200 in 1132ms (next.js: 481ms, application-code: 650ms)
+ GET /login 200 in 1592ms (next.js: 23ms, application-code: 1570ms)
+ GET /login 200 in 1590ms (next.js: 96ms, application-code: 1494ms)
+ GET /login 200 in 505ms (next.js: 85ms, application-code: 420ms)
+ GET /login 200 in 617ms (next.js: 72ms, application-code: 545ms)

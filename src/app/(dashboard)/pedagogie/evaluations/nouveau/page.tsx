@@ -23,6 +23,7 @@ export default async function NewAssessmentPage({ searchParams }: { searchParams
     <main className="page">
       <div className="page-header"><div><h1 className="page-title">Nouvelle évaluation</h1><p className="page-subtitle">Le serveur vérifiera la cohérence année/période/classe/matière/enseignant.</p></div><Link className="button button-secondary" href="/pedagogie/evaluations">Retour</Link></div>
       {params.error ? <p className="error">{params.error}</p> : null}
+      <p className="field-hint">Le coefficient dépend du couple matière / classe. Configurez-le sur la fiche de la matière, dans « Rattacher la matière à une classe et une année », avant de créer l’évaluation. <Link href="/pedagogie/matieres">Ouvrir les matières</Link></p>
       <section className="card">
         <form action={createAssessment}>
           <div className="grid grid-2">

@@ -67,6 +67,8 @@ export default async function UserAccessPage({ searchParams }: { searchParams: P
   const selectedUser = (users ?? []).find((user) => user.id === params.userId)
     ?? (users ?? []).find((user) => user.id !== context.profile.id)
     ?? users?.[0]
+  const isOwnAccount = selectedUser?.id === context.profile.id
+  const canSetOwnInitialStage = isOwnAccount && selectedUser?.education_stage === null
 
   const { data: assignments, error: assignmentsError } = selectedUser
     ? await supabase.from('user_roles')
@@ -127,19 +129,25 @@ export default async function UserAccessPage({ searchParams }: { searchParams: P
                 <div><h2>{selectedUser.first_name} {selectedUser.last_name}</h2><p className="page-subtitle">{selectedUser.email ?? 'Adresse e-mail non renseignée'}</p></div>
                 <span className={`it-user-status status-${selectedUser.status}`}>{selectedUser.status === 'active' ? 'Connexion autorisée' : selectedUser.status === 'suspended' ? 'Connexion suspendue' : 'Compte inactif'}</span>
               </div>
-              {selectedUser.id === context.profile.id ? <p className="error" style={{ marginTop: 16 }}>Votre propre compte est protégé : choisissez un autre utilisateur pour modifier ses accès.</p> : (
+              {isOwnAccount && !canSetOwnInitialStage ? (
+                <p className="error" style={{ marginTop: 16 }}>Votre propre compte est protégé : son cycle déjà attribué ne peut pas être modifié ici.</p>
+              ) : (
                 <>
-                  <form action={updateUserLoginAccess} className="it-access-status-form">
-                    <input type="hidden" name="userId" value={selectedUser.id} />
-                    <label className="field" style={{ margin: 0 }}><span className="label">Accès à la connexion</span><select className="select" name="status" defaultValue={selectedUser.status}><option value="active">Autorisé</option><option value="suspended">Suspendu</option><option value="inactive">Désactivé</option></select></label>
-                    <button className="button button-primary" type="submit">Enregistrer l’accès</button>
-                  </form>
+                  {!isOwnAccount ? (
+                    <form action={updateUserLoginAccess} className="it-access-status-form">
+                      <input type="hidden" name="userId" value={selectedUser.id} />
+                      <label className="field" style={{ margin: 0 }}><span className="label">Accès à la connexion</span><select className="select" name="status" defaultValue={selectedUser.status}><option value="active">Autorise</option><option value="suspended">Suspendu</option><option value="inactive">Désactivé</option></select></label>
+                      <button className="button button-primary" type="submit">Enregistrer l’accès</button>
+                    </form>
+                  ) : null}
                   <form action={updateUserEducationStage} className="it-access-status-form" style={{ marginTop: 14 }}>
                     <input type="hidden" name="userId" value={selectedUser.id} />
-                    <label className="field" style={{ margin: 0, flex: 1 }}><span className="label">Données accessibles</span><select className="select" name="educationStage" required defaultValue={selectedUser.education_stage ?? ''}><option value="" disabled>Choisir le cycle autorisé…</option>{Object.entries(educationStages).map(([value, label]) => <option value={value} key={value}>{label}</option>)}<option value="parent">Parent — enfants rattachés uniquement</option></select></label>
+                    <label className="field" style={{ margin: 0, flex: 1 }}><span className="label">Données accessibles</span><select className="select" name="educationStage" required defaultValue={canSetOwnInitialStage ? '' : selectedUser.education_stage ?? ''}><option value="" disabled>Choisir le cycle autorisé</option>{Object.entries(educationStages).map(([value, label]) => <option value={value} key={value}>{label}</option>)}{!isOwnAccount ? <option value="parent">Parent — enfants rattachés uniquement</option> : null}</select></label>
                     <button className="button button-primary" type="submit">Enregistrer le cycle</button>
                   </form>
-                  <p className="page-subtitle" style={{ marginTop: 8 }}>Un compte ordinaire est limité à un seul cycle. Les parents voient uniquement les dossiers de leurs enfants.</p>
+                  {canSetOwnInitialStage
+                    ? <p className="page-subtitle" style={{ marginTop: 8 }}>Attribuez le cycle initial de votre compte. Vous pourrez ensuite demander à un autre administrateur de le modifier.</p>
+                    : <p className="page-subtitle" style={{ marginTop: 8 }}>Un compte ordinaire est limité à un seul cycle. Les parents voient uniquement les dossiers de leurs enfants.</p>}
                 </>
               )}
             </section>

@@ -4,32 +4,10 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { assignSubjectToClass } from '../../subjects-actions'
 
-type SchoolYear = {
-  id: string
-  name: string
-  is_current: boolean
-}
+type SchoolYear = { id: string; name: string; is_current: boolean }
+type SchoolClass = { id: string; name: string; code: string; school_year_id: string }
 
-type SchoolClass = {
-  id: string
-  name: string
-  code: string
-  school_year_id: string
-}
-
-export default function SubjectClassAssignmentForm({
-  subjectId,
-  coefficient,
-  weeklyHours,
-  years,
-  classes,
-}: {
-  subjectId: string
-  coefficient: number
-  weeklyHours: number | null
-  years: SchoolYear[]
-  classes: SchoolClass[]
-}) {
+export default function SubjectClassAssignmentForm({ subjectId, weeklyHours, years, classes }: { subjectId: string; weeklyHours: number | null; years: SchoolYear[]; classes: SchoolClass[] }) {
   const initialYearId = years.find((year) => year.is_current)?.id ?? years[0]?.id ?? ''
   const [schoolYearId, setSchoolYearId] = useState(initialYearId)
   const availableClasses = classes.filter((item) => item.school_year_id === schoolYearId)
@@ -57,8 +35,8 @@ export default function SubjectClassAssignmentForm({
         {!availableClasses.length ? <p className="field-hint">Aucune classe active pour cette année. <Link href="/administration/classes/nouveau">Créer une classe</Link></p> : null}
       </div>
       <div className="field">
-        <label className="label" htmlFor="coefficientOverride">Coefficient spécifique</label>
-        <input className="input" id="coefficientOverride" name="coefficientOverride" type="number" min="0.01" step="0.01" placeholder={`Par défaut : ${coefficient}`} />
+        <label className="label" htmlFor="coefficientOverride">Coefficient de cette matière dans la classe *</label>
+        <input className="input" id="coefficientOverride" name="coefficientOverride" type="number" min="0.01" step="0.01" placeholder="Ex. 3" required />
       </div>
       <div className="field">
         <label className="label" htmlFor="weeklyHoursOverride">H/semaine spécifique</label>

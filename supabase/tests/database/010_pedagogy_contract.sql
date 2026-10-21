@@ -27,8 +27,8 @@ select has_function('app','is_teacher_for_assessment'::name);
 select has_function('app','is_teacher_for_timetable_slot'::name);
 select has_function('app','can_manage_assessment_for_class_subject'::name);
 
-select policies_are('public','grades',ARRAY['grades_delete_021','grades_insert_021','grades_select_021','grades_update_021']);
-select policies_are('public','report_cards',ARRAY['report_cards_delete_021','report_cards_insert_021','report_cards_select_021','report_cards_update_021']);
+select policies_are('public','grades',ARRAY['education_stage_boundary','grades_delete_021','grades_insert_021','grades_select_021','grades_update_021']);
+select policies_are('public','report_cards',ARRAY['education_stage_boundary','report_cards_delete_021','report_cards_insert_021','report_cards_select_021','report_cards_update_021']);
 
 select * from finish();
 rollback;

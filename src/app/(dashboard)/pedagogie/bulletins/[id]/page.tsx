@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
+import { ReportActions } from '@/components/reports/report-actions'
 import { publishReportCard } from '../../pedagogie-actions'
 
 export default async function ReportCardDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; generated?: string; published?: string }> }) {

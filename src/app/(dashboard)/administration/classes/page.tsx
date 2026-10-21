@@ -5,6 +5,7 @@ import { toggleClass } from '../academic-actions'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { SchoolYearSelect } from '@/components/administration/school-year-select'
+import { ReportActions } from '@/components/reports/report-actions'
 
 export default async function ClassesPage({
   searchParams,
@@ -75,6 +76,8 @@ export default async function ClassesPage({
           </div>
         </form>
       </section>
+
+      <ReportActions title={`Classes — ${(years ?? []).find((year) => year.id === selectedYear)?.name ?? ''}`} fileName="liste-classes" headers={['Code', 'Classe', 'Section', 'Salle', 'Effectif maximal', 'Statut']} rows={classes.map((item) => [item.code, item.name, item.section, item.room_name, item.capacity, item.is_active ? 'Active' : 'Archivée'])} />
 
       <section className="card">
         <div className="table-wrap">

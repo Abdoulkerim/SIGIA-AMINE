@@ -22,6 +22,7 @@ export default function NewSubjectPage() {
         <Link className="button button-secondary" href="/pedagogie/matieres">Retour</Link>
       </div>
 
+      <p className="field-hint">Le coefficient ne se définit pas ici : il dépend de la classe. Après la création, ouvrez la matière et définissez son coefficient pour chaque classe et année scolaire.</p>
       <section className="card">
         <form action={createSubject} className="grid grid-2">
           <div className="field">
@@ -37,10 +38,6 @@ export default function NewSubjectPage() {
             <select className="select" id="domain" name="domain" defaultValue="general" required>
               {domains.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
-          </div>
-          <div className="field">
-            <label className="label" htmlFor="coefficient">Coefficient *</label>
-            <input className="input" id="coefficient" name="coefficient" type="number" min="0.01" step="0.01" defaultValue="1" required />
           </div>
           <div className="field">
             <label className="label" htmlFor="weeklyHours">Volume horaire hebdomadaire</label>
