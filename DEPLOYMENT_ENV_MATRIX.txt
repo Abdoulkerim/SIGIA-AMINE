@@ -16,6 +16,7 @@ PRODUCTION
 - Dedicated Supabase production project
 - Vercel Production deployment
 - Production domain + HTTPS
+- Next.js server variables: `SUPABASE_URL` and `SUPABASE_SECRET_KEY` (or `SUPABASE_SERVICE_ROLE_KEY`) for managed account creation; never public
 - Production Edge Function secrets
 - Backups enabled and tested
 - No direct schema changes in Supabase Dashboard

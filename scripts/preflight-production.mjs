@@ -10,13 +10,15 @@ const forbiddenPublicPatterns = [
 ]
 
 const missing = required.filter((name) => !process.env[name])
+const missingAdminKey = !process.env.SUPABASE_SECRET_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY
 const publicSecretLike = Object.keys(process.env).filter((name) =>
   forbiddenPublicPatterns.some((pattern) => pattern.test(name)),
 )
 
-if (missing.length || publicSecretLike.length) {
+if (missing.length || missingAdminKey || publicSecretLike.length) {
   console.error('Production preflight failed.')
   if (missing.length) console.error('Missing:', missing.join(', '))
+  if (missingAdminKey) console.error('Missing: SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_ROLE_KEY) for managed user creation')
   if (publicSecretLike.length) console.error('Potentially unsafe NEXT_PUBLIC variables:', publicSecretLike.join(', '))
   process.exit(1)
 }
@@ -24,3 +26,4 @@ if (missing.length || publicSecretLike.length) {
 console.log('Production preflight OK.')
 console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
 console.log('Publishable key present: yes')
+console.log('Server admin key present: yes')

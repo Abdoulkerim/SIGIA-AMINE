@@ -86,7 +86,11 @@ Variables Production :
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_URL` (même URL de projet, côté serveur)
+- `SUPABASE_SECRET_KEY` (clé secrète/service role, côté serveur; requise pour créer les comptes)
 - `NEXT_PUBLIC_APP_URL`
+
+Ajouter `SUPABASE_SECRET_KEY` dans les variables d'environnement Vercel du projet Supabase de production, avec l'environnement `Production` sélectionné. Copier la clé secrète ou `service_role` depuis les clés API du projet Supabase. Ne jamais lui ajouter le préfixe `NEXT_PUBLIC_`. Redéployer l'application après l'ajout; les variables Vercel ne sont injectées dans une version déjà déployée qu'après un nouveau déploiement.
 
 Ne pas placer la clé OpenAI dans les variables publiques de Next.js. Elle appartient aux secrets de la fonction Edge.
 
