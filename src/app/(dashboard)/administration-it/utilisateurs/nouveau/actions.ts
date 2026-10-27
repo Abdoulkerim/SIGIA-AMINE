@@ -25,8 +25,26 @@ export async function createManagedUser(formData: FormData) {
   const schoolId = context?.profile.school_id
   if (!context || !isAdmin || !schoolId) redirect(formUrl('Accès refusé ou établissement manquant.'))
 
-  const serviceKey = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!serviceKey) redirect(formUrl('La création de comptes nécessite une clé secrète Supabase configurée côté serveur.'))
+const secretKey = process.env.SUPABASE_SECRET_KEY?.trim()
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+const serviceKey = secretKey || serviceRoleKey
+
+console.error('[SIGIA-AMINE] Diagnostic configuration Supabase', {
+  hasSecretKey: Boolean(secretKey),
+  hasServiceRoleKey: Boolean(serviceRoleKey),
+  hasSupabaseUrl: Boolean(
+    process.env.SUPABASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+  ),
+})
+
+if (!serviceKey) {
+  redirect(
+    formUrl(
+      'La création de comptes nécessite une clé secrète Supabase configurée côté serveur.'
+    )
+  )
+}
 
   const supabase = await createClient()
   const { data: role, error: roleError } = await supabase.from('roles').select('id,code').eq('id', parsed.data.roleId).maybeSingle()
