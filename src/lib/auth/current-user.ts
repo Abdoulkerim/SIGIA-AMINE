@@ -9,7 +9,7 @@ export async function getCurrentUserContext() {
 
   const { data: profile, error } = await supabase
     .from('users')
-    .select('id, first_name, last_name, email, school_id, status')
+    .select('id, first_name, last_name, email, school_id, status, education_stage')
     .eq('id', claims.sub)
     .single()
 

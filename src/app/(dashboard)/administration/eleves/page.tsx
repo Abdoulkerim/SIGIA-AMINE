@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
 import { ReportActions } from '@/components/reports/report-actions'
 
-export default async function StudentsPage({ searchParams }: { searchParams: Promise<{ created?: string; classId?: string }> }) {
+export default async function StudentsPage({ searchParams }: { searchParams: Promise<{ created?: string; classAssigned?: string; classId?: string }> }) {
   const context = await getCurrentUserContext()
   if (!context?.profile.school_id) return null
 
@@ -34,6 +34,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
       </div>
 
       {params.created ? <p className="success">Élève enregistré avec succès.</p> : null}
+      {params.classAssigned ? <p className="success">L’élève a aussi été inscrit dans la classe choisie.</p> : null}
       {error ? <p className="error">Erreur de lecture : {error.message}</p> : null}
 
       <section className="card" style={{ marginBottom: 16 }}>

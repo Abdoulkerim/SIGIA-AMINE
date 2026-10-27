@@ -10,6 +10,8 @@ const studentSchema = z.object({
   studentNumber: z.string().trim().min(1).max(50),
   firstName: z.string().trim().min(1).max(100),
   lastName: z.string().trim().min(1).max(100),
+  educationStage: z.enum(['maternelle', 'primaire', 'secondaire', 'formation', 'autre']),
+  classId: z.string().uuid().optional(),
   gender: z.enum(['male', 'female', 'other']).optional(),
   dateOfBirth: z.string().optional(),
   residenceType: z.enum(['internal', 'external', 'other']).default('external'),
@@ -167,6 +169,8 @@ export async function createStudent(formData: FormData) {
     studentNumber: formData.get('studentNumber'),
     firstName: formData.get('firstName'),
     lastName: formData.get('lastName'),
+    educationStage: formData.get('educationStage'),
+    classId: formData.get('classId') || undefined,
     gender: formData.get('gender') || undefined,
     dateOfBirth: formData.get('dateOfBirth') || undefined,
     residenceType: formData.get('residenceType') || 'external',
@@ -176,7 +180,30 @@ export async function createStudent(formData: FormData) {
     redirect(`/administration/eleves/nouveau?error=${encodeURIComponent('Vérifie les champs du formulaire.')}`)
   }
 
+  const canChooseAnyStage = context.roles.some(({ code }) => ['founder', 'super_admin'].includes(code ?? ''))
+  if (!canChooseAnyStage && context.profile.education_stage !== parsed.data.educationStage) {
+    redirect(`/administration/eleves/nouveau?error=${encodeURIComponent('Le cycle choisi ne correspond pas au périmètre de votre compte.')}`)
+  }
+
   const supabase = await createClient()
+  let selectedClass: { id: string; school_year_id: string; education_stage: string | null } | null = null
+  if (parsed.data.classId) {
+    const { data, error: classError } = await supabase
+      .from('classes')
+      .select('id,school_year_id,education_stage')
+      .eq('id', parsed.data.classId)
+      .eq('school_id', context.profile.school_id)
+      .maybeSingle()
+
+    if (classError || !data) {
+      redirect(`/administration/eleves/nouveau?error=${encodeURIComponent(classError?.message ?? 'La classe sélectionnée est introuvable.')}`)
+    }
+    if (data.education_stage !== parsed.data.educationStage) {
+      redirect(`/administration/eleves/nouveau?error=${encodeURIComponent('Le cycle de la classe doit correspondre au cycle de l’élève.')}`)
+    }
+    selectedClass = data
+  }
+
   let photoPath: string | null = null
   const photo = selectedPhoto(formData)
   if (photo) {
@@ -187,8 +214,9 @@ export async function createStudent(formData: FormData) {
     }
   }
 
-  const { error } = await supabase.from('students').insert({
+  const { data: student, error } = await supabase.from('students').insert({
     school_id: context.profile.school_id,
+    education_stage: parsed.data.educationStage,
     student_number: parsed.data.studentNumber,
     first_name: parsed.data.firstName,
     last_name: parsed.data.lastName,
@@ -197,13 +225,45 @@ export async function createStudent(formData: FormData) {
     residence_type: parsed.data.residenceType,
     status: 'active',
     photo_url: photoPath,
-  })
+  }).select('id').single()
 
   if (error) {
     await removeUploadedPhoto(supabase, photoPath)
     redirect(`/administration/eleves/nouveau?error=${encodeURIComponent(error.message)}`)
   }
 
+  let classAssigned = false
+  if (selectedClass) {
+    const { data: enrollment, error: enrollmentError } = await supabase.from('enrollments').insert({
+      school_id: context.profile.school_id,
+      student_id: student.id,
+      school_year_id: selectedClass.school_year_id,
+      class_id: selectedClass.id,
+      residence_type: parsed.data.residenceType,
+      status: 'pending',
+    }).select('id').single()
+
+    if (enrollmentError || !enrollment) {
+      redirect(`/administration/eleves/${student.id}?error=${encodeURIComponent(`Élève créé, mais inscription à la classe impossible : ${enrollmentError?.message ?? 'erreur inconnue'}`)}`)
+    }
+
+    const { error: approvalError } = await supabase.from('enrollments').update({ status: 'approved' }).eq('id', enrollment.id)
+    if (approvalError) {
+      redirect(`/administration/eleves/${student.id}?error=${encodeURIComponent(`Élève créé, mais inscription à la classe à valider : ${approvalError.message}`)}`)
+    }
+
+    const { error: finalizeError } = await supabase.rpc('finalize_enrollment', {
+      p_enrollment_id: enrollment.id,
+      p_class_id: selectedClass.id,
+    })
+    if (finalizeError) {
+      redirect(`/administration/eleves/${student.id}?error=${encodeURIComponent(`Élève créé, mais affectation à la classe à terminer : ${finalizeError.message}`)}`)
+    }
+    classAssigned = true
+  }
+
   revalidatePath('/administration/eleves')
-  redirect('/administration/eleves?created=1')
+  revalidatePath(`/administration/eleves/${student.id}`)
+  revalidatePath('/administration/inscriptions')
+  redirect(`/administration/eleves?created=1${classAssigned ? '&classAssigned=1' : ''}`)
 }
