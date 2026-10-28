@@ -25,34 +25,16 @@ export async function createManagedUser(formData: FormData) {
   const schoolId = context?.profile.school_id
   if (!context || !isAdmin || !schoolId) redirect(formUrl('Accès refusé ou établissement manquant.'))
 
-const secretKey = process.env.SUPABASE_SECRET_KEY?.trim()
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
-const serviceKey = secretKey || serviceRoleKey
+  const serviceKey = process.env.SUPABASE_SECRET_KEY?.trim() || process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+  const supabaseUrl = process.env.SUPABASE_URL?.trim() || process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
 
-console.error('[SIGIA-AMINE] Diagnostic configuration Supabase', {
-  hasSecretKey: Boolean(secretKey),
-  hasServiceRoleKey: Boolean(serviceRoleKey),
-  hasSupabaseUrl: Boolean(
-    process.env.SUPABASE_URL?.trim() ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
-  ),
-})
-
-if (!serviceKey) {
-  redirect(
-    formUrl(
-      'La création de comptes nécessite une clé secrète Supabase configurée côté serveur.'
-    )
-  )
-}
-
+  if (!serviceKey) redirect(formUrl('Cl\u00e9 Supabase absente \u00e0 l\u2019ex\u00e9cution du serveur. Configurez SUPABASE_SECRET_KEY dans les variables d\u2019environnement Runtime du d\u00e9ploiement (pas dans les Build Args), puis red\u00e9marrez ou red\u00e9ployez l\u2019application.'))
+  if (!supabaseUrl) redirect(formUrl('URL Supabase absente \u00e0 l\u2019ex\u00e9cution du serveur. Configurez SUPABASE_URL puis red\u00e9marrez ou red\u00e9ployez l\u2019application.'))
   const supabase = await createClient()
   const { data: role, error: roleError } = await supabase.from('roles').select('id,code').eq('id', parsed.data.roleId).maybeSingle()
   if (roleError || !role) redirect(formUrl('Le rôle sélectionné est introuvable.'))
   const isPrivilegedManager = context.roles.some(({ code }) => ['super_admin','founder'].includes(code ?? ''))
   if (!isPrivilegedManager && ['super_admin','founder','it_admin'].includes(role.code)) redirect(formUrl('Seul un super administrateur ou le fondateur peut attribuer ce rôle.'))
-
-  const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL!
   const admin = createSupabaseClient<Database>(supabaseUrl, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
   const { data: created, error: createError } = await admin.auth.admin.createUser({
     email: parsed.data.email, password: parsed.data.password, email_confirm: true,

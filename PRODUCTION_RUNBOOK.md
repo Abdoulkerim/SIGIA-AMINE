@@ -100,6 +100,8 @@ Après configuration, déployer depuis `main` ou via la CLI :
 vercel deploy --prod
 ```
 
+Pour un déploiement Docker, définir `SUPABASE_URL` et `SUPABASE_SECRET_KEY` dans les secrets/variables d'environnement du conteneur au démarrage. Ne pas les mettre dans les arguments de construction (`Build Args`) : ils ne garantissent pas leur présence à l'exécution et un secret fourni au build peut être conservé dans l'image ou ses journaux. Après modification, redémarrer le conteneur.
+
 ## 6. Domaine et Auth
 
 Dans Supabase Auth, configurer l'URL de site et les redirect URLs exactes de production.
