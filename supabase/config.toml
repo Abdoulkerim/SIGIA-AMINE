@@ -1,2 +1,5 @@
 [functions.ai-assistant]
 verify_jwt = true
+
+[functions.managed-create-user]
+verify_jwt = true

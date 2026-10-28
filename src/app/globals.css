@@ -263,3 +263,8 @@ tr:last-child td { border-bottom: 0; }
 @media (prefers-reduced-motion: reduce) {
   .nav-chevron { transition: none; }
 }
+.managed-password-wrap { position: relative; }
+.managed-password-wrap .input { padding-right: 48px; }
+.managed-password-toggle { position: absolute; top: 50%; right: 8px; display: grid; width: 34px; height: 34px; place-items: center; transform: translateY(-50%); border: 0; border-radius: 50%; background: transparent; color: #55705f; cursor: pointer; }
+.managed-password-toggle:hover { background: rgba(0,106,68,.08); color: #006a44; }
+.managed-password-toggle:focus-visible { outline: 2px solid #009e60; outline-offset: 2px; }

@@ -86,11 +86,8 @@ Variables Production :
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-- `SUPABASE_URL` (même URL de projet, côté serveur)
-- `SUPABASE_SECRET_KEY` (clé secrète/service role, côté serveur; requise pour créer les comptes)
 - `NEXT_PUBLIC_APP_URL`
 
-Ajouter `SUPABASE_SECRET_KEY` dans les variables d'environnement Vercel du projet Supabase de production, avec l'environnement `Production` sélectionné. Copier la clé secrète ou `service_role` depuis les clés API du projet Supabase. Ne jamais lui ajouter le préfixe `NEXT_PUBLIC_`. Redéployer l'application après l'ajout; les variables Vercel ne sont injectées dans une version déjà déployée qu'après un nouveau déploiement.
 
 Ne pas placer la clé OpenAI dans les variables publiques de Next.js. Elle appartient aux secrets de la fonction Edge.
 
@@ -100,7 +97,16 @@ Après configuration, déployer depuis `main` ou via la CLI :
 vercel deploy --prod
 ```
 
-Pour un déploiement Docker, définir `SUPABASE_URL` et `SUPABASE_SECRET_KEY` dans les secrets/variables d'environnement du conteneur au démarrage. Ne pas les mettre dans les arguments de construction (`Build Args`) : ils ne garantissent pas leur présence à l'exécution et un secret fourni au build peut être conservé dans l'image ou ses journaux. Après modification, redémarrer le conteneur.
+
+La creation de comptes passe par la fonction Edge `managed-create-user`. Elle utilise la cle secrete fournie par Supabase au runtime de la fonction; aucune cle secrete nest requise dans Next.js ou dans les arguments de construction Docker.
+
+Deployer la fonction apres mise a jour du depot :
+
+```powershell
+supabase functions deploy managed-create-user --project-ref YOUR_PRODUCTION_PROJECT_REF
+```
+
+La fonction conserve `verify_jwt = true` et controle les roles de lappelant avant toute creation.
 
 ## 6. Domaine et Auth
 
