@@ -23,7 +23,7 @@ export async function signIn(formData: FormData) {
     }
     const secretKey = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!secretKey) {
-      redirect(`/login?error=${encodeURIComponent('La connexion par nom d’utilisateur n’est pas configurée. Utilisez votre adresse e-mail ou contactez le support.')}`)
+      redirect(`/login?error=${encodeURIComponent('La connexion par nom d’utilisateur nécessite SUPABASE_SECRET_KEY dans l’environnement serveur. Ajoutez cette variable puis redémarrez le service. Vous pouvez aussi vous connecter avec votre adresse e-mail.')}`)
     }
     const admin = createSupabaseClient<Database>(process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL!, secretKey, { auth: { autoRefreshToken: false, persistSession: false } })
     const username = identifier.toLowerCase()

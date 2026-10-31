@@ -46,3 +46,7 @@
 
 
 ÉTAPE 26 — Production / déploiement final — aucun changement de schéma ; industrialisation du déploiement de l'ensemble des migrations et Edge Functions jusqu'à 033.
+
+034 | 20261029090000_update_employee_profile.sql | Modification sécurisée des dossiers employés.
+035 | 20261029170116_update_specialized_levels_and_wushu_groups.sql | Modification sécurisée des niveaux Arabe et Tahfiz, et des groupes Wushu.
+036 | 20261029170238_add_tahfiz_level_description.sql | Ajout de la description configurable aux niveaux Tahfiz existants.

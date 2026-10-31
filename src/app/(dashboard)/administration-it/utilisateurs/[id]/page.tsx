@@ -6,9 +6,9 @@ import { setTemporaryPassword } from './actions'
 
 export default async function ManageUserAccountPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; updated?: string }> }) {
   const [context, { id }, query] = await Promise.all([getCurrentUserContext(), params, searchParams])
-  if (!context?.profile.school_id) redirect('/dashboard')
+  if (!context?.roles.some(({ code }) => code === 'it_admin')) redirect('/dashboard')
   const supabase = await createClient()
-  const { data: user } = await supabase.from('users').select('id,first_name,last_name,username,email').eq('id', id).eq('school_id', context.profile.school_id).maybeSingle()
+  const { data: user } = await supabase.from('users').select('id,first_name,last_name,username,email').eq('id', id).maybeSingle()
   if (!user) notFound()
   return <main className="page">
     <div className="page-header"><div><h1 className="page-title">Compte de {user.first_name} {user.last_name}</h1><p className="page-subtitle">{user.username ? `@${user.username}` : user.email}</p></div><Link className="button button-secondary" href="/administration-it/utilisateurs">Retour aux utilisateurs</Link></div>

@@ -12,15 +12,22 @@ const securityHeaders = [
 if (isProduction) {
   securityHeaders.push({
     key: 'Strict-Transport-Security',
-    value: 'max-age=31536000; includeSubDomains; preload',
+    value: 'max-age=31536000',
   })
 }
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   reactStrictMode: true,
   poweredByHeader: false,
+
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }]
+    return [
+      {
+        source: '/:path*',
+        headers: securityHeaders,
+      },
+    ]
   },
 }
 

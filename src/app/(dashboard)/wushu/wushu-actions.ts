@@ -31,6 +31,31 @@ export async function createWushuGroup(formData: FormData) {
   redirect('/wushu/groupes?created=1')
 }
 
+export async function updateWushuGroup(formData: FormData) {
+  const id = uuid.safeParse(formData.get('groupId'))
+  const code = z.string().trim().max(60).optional().safeParse(formData.get('code') || undefined)
+  const name = z.string().trim().min(1).max(160).safeParse(formData.get('name'))
+  const level = z.string().trim().max(120).optional().safeParse(formData.get('level') || undefined)
+  const coach = uuid.optional().safeParse(formData.get('coachEmployeeId') || undefined)
+  if (![id, code, name, level, coach].every((value) => value.success)) fail('/wushu/groupes', 'Vérifiez les informations du groupe Wushu.')
+
+  const supabase = await createClient()
+  const { error } = await (supabase as any).rpc('update_wushu_group', {
+    p_group_id: id.data,
+    p_code: code.data ?? null,
+    p_name: name.data,
+    p_level: level.data ?? null,
+    p_coach_employee_id: coach.data ?? null,
+    p_is_active: formData.get('isActive') === 'on',
+  })
+  if (error?.message.includes('FORBIDDEN_EDUCATION_STAGE')) fail('/wushu/groupes', 'Ce groupe est hors du cycle autorisé à votre compte.')
+  if (error) fail('/wushu/groupes', error.message)
+  revalidatePath('/wushu')
+  revalidatePath('/wushu/groupes')
+  revalidatePath('/wushu/eleves')
+  redirect('/wushu/groupes?updated=1')
+}
+
 export async function assignStudentWushu(formData: FormData) {
   const studentId = uuid.safeParse(formData.get('studentId'))
   const groupId = uuid.safeParse(formData.get('groupId'))

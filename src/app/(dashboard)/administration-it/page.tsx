@@ -16,6 +16,7 @@ const tools = [
 
 export default async function ITAdministrationPage() {
   const context = await getCurrentUserContext()
+  const canManageAccounts = context?.roles.some(({ code }) => code === 'it_admin') ?? false
   const schoolId = context?.profile.school_id
   const supabase = await createClient()
   let usersQuery = supabase.from('users').select('id', { count: 'exact', head: true })
@@ -29,6 +30,9 @@ export default async function ITAdministrationPage() {
     supabase.from('roles').select('id', { count: 'exact', head: true }),
     auditQuery,
   ])
+  const visibleTools = tools.filter(({ href }) =>
+    canManageAccounts || !['/administration-it/utilisateurs', '/administration-it/utilisateurs/nouveau', '/administration-it/acces'].includes(href),
+  )
 
   return (
     <main className="page">
@@ -54,7 +58,7 @@ export default async function ITAdministrationPage() {
           </div>
         </div>
         <div className="grid grid-2">
-          {tools.map(({ title, description, href, icon: Icon, color }) => (
+          {visibleTools.map(({ title, description, href, icon: Icon, color }) => (
             <Link className="card it-tool-card" href={href} key={href}>
               <span className="it-tool-icon" style={{ color, background: `${color}14` }}><Icon size={22} aria-hidden="true" /></span>
               <span className="it-tool-copy"><strong>{title}</strong><span>{description}</span></span>

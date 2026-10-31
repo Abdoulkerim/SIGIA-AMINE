@@ -43,6 +43,7 @@ export default async function TeacherDetailPage({
         <div className="actions">
           <Link className="button button-secondary" href="/personnel/enseignants">Retour</Link>
           <Link className="button button-primary" href={`/pedagogie/affectations/nouveau?teacher=${teacher.id}`}>+ Affecter</Link>
+          <a className="button button-secondary" href="#informations-enseignant">Modifier les informations</a>
         </div>
       </div>
 
@@ -50,7 +51,7 @@ export default async function TeacherDetailPage({
       {query.updated ? <p className="success">Modification enregistrée.</p> : null}
       {query.error ? <p className="error">{query.error}</p> : null}
 
-      <section className="card" style={{ marginBottom: 16 }}>
+      <section className="card" id="informations-enseignant" style={{ marginBottom: 16 }}>
         <h2>Informations de l'enseignant</h2>
         <form action={updateTeacher} className="grid grid-2">
           <input type="hidden" name="id" value={teacher.id} />

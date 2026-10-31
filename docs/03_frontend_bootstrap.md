@@ -22,6 +22,8 @@ SUPABASE_URL=http://127.0.0.1:54321
 SUPABASE_SECRET_KEY=COLLER_LA_CLE_SECRET_LOCALE
 ```
 
+La connexion accepte l’adresse e-mail ou le nom d’utilisateur enregistré sur le profil. La résolution du nom d’utilisateur vers l’e-mail Auth utilise `SUPABASE_SECRET_KEY` côté serveur. Après avoir ajouté ou modifié cette variable, redémarrer Next.js. En hébergement, configurer la même variable dans l’environnement serveur de production; ne jamais utiliser le préfixe `NEXT_PUBLIC_` pour cette clé.
+
 Ne jamais committer `.env.local`.
 
 ## Générer les types

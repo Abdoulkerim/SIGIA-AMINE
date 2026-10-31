@@ -1,4 +1,11 @@
 import process from 'node:process'
+import { createRequire } from 'node:module'
+
+const require = createRequire(import.meta.url)
+const { loadEnvConfig } = require('@next/env')
+
+// Charger les variables d'environnement du projet
+loadEnvConfig(process.cwd())
 
 const required = [
   'NEXT_PUBLIC_SUPABASE_URL',
@@ -10,18 +17,31 @@ const forbiddenPublicPatterns = [
 ]
 
 const missing = required.filter((name) => !process.env[name])
+
 const publicSecretLike = Object.keys(process.env).filter((name) =>
   forbiddenPublicPatterns.some((pattern) => pattern.test(name)),
 )
 
 if (missing.length || publicSecretLike.length) {
   console.error('Production preflight failed.')
-  if (missing.length) console.error('Missing:', missing.join(', '))
-  if (publicSecretLike.length) console.error('Potentially unsafe NEXT_PUBLIC variables:', publicSecretLike.join(', '))
+
+  if (missing.length) {
+    console.error('Missing:', missing.join(', '))
+  }
+
+  if (publicSecretLike.length) {
+    console.error(
+      'Potentially unsafe NEXT_PUBLIC variables:',
+      publicSecretLike.join(', '),
+    )
+  }
+
   process.exit(1)
 }
 
 console.log('Production preflight OK.')
 console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
 console.log('Publishable key present: yes')
-console.log('Managed user creation: handled by authenticated Supabase Edge Function')
+console.log(
+  'Managed user creation: handled by authenticated Supabase Edge Function',
+)

@@ -1,10 +1,27 @@
-﻿node_modules
+﻿
+# Dependances et fichiers de compilation
+node_modules
 .next
+coverage
+*.tsbuildinfo
+
+# Git
 .git
 .github
+
+# Variables d'environnement et secrets
 .env
 .env.*
 !.env.example
+
+# Journaux
 npm-debug.log*
+*.log
+
+# Fichiers systeme
 .DS_Store
-coverage
+Thumbs.db
+
+# Fichiers temporaires et sauvegardes locales
+*.tmp
+*.bak

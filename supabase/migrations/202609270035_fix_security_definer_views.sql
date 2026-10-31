@@ -3,6 +3,9 @@
 
 begin;
 
+alter table public.tahfiz_levels
+add column if not exists description text;
+
 -- Drop existing views that have SECURITY DEFINER
 DROP VIEW IF EXISTS public.v_student_financial_summary CASCADE;
 DROP VIEW IF EXISTS public.v_class_effectives CASCADE;

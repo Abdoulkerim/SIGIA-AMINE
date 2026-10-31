@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
-import { createTahfizLevel, assignStudentTahfiz, recordTahfizSession, publishTahfizSession } from '../tahfiz-arabe-actions'
+import { createTahfizLevel, updateTahfizLevel, assignStudentTahfiz, recordTahfizSession, publishTahfizSession } from '../tahfiz-arabe-actions'
 import { ProgressBar } from '@/components/administration/progress-bar'
 
 const statusLabels: Record<string,string> = { active:'Actif', paused:'Suspendu', completed:'Terminé', inactive:'Inactif' }
@@ -9,25 +9,26 @@ const attendanceLabels: Record<string,string> = { present:'Présent', absent:'Ab
 const sessionLabels: Record<string,string> = { new_memorization:'Nouvelle mémorisation', revision:'Révision', recitation:'Récitation', evaluation:'Évaluation' }
 function text(v: unknown) { return v === null || v === undefined || v === '' ? '—' : String(v) }
 
-export default async function TahfizPage({ searchParams }: { searchParams: Promise<{ error?: string; created?: string; assigned?: string; session?: string; published?: string }> }) {
+export default async function TahfizPage({ searchParams }: { searchParams: Promise<{ error?: string; created?: string; updated?: string; assigned?: string; session?: string; published?: string }> }) {
   const query = await searchParams
   const context = await getCurrentUserContext()
   if (!context?.profile.school_id) return null
   const supabase = await createClient()
   const schoolId = context.profile.school_id
   const [{ data: levels }, { data: students }, { data: staffJson }, { data: surahs }, { data: profiles }, { data: sessions }] = await Promise.all([
-    supabase.from('tahfiz_levels').select('id,code,name,sequence_no,is_active').eq('school_id', schoolId).eq('is_active', true).order('sequence_no').order('name'),
+    supabase.from('tahfiz_levels').select('id,code,name,sequence_no,is_active,description').eq('school_id', schoolId).order('sequence_no').order('name'),
     supabase.from('students').select('id,student_number,first_name,last_name').eq('school_id', schoolId).order('last_name').order('first_name').limit(500),
     supabase.rpc('get_specialized_staff', { p_module: 'tahfiz' }),
     supabase.from('quran_surahs').select('id,name_ar,name_fr,surah_number').order('surah_number'),
     supabase.from('student_tahfiz').select('id,student_id,tahfiz_level_id,assigned_teacher_id,start_date,current_progress,status,notes,students(first_name,last_name,student_number),tahfiz_levels(name),employees(first_name,last_name)').eq('school_id', schoolId).order('updated_at', { ascending:false }).limit(100),
     supabase.from('tahfiz_sessions').select('id,student_id,session_date,session_type,surah_id,from_verse,to_verse,score,observation,teacher_id,attendance_status,is_published,students(first_name,last_name),quran_surahs(name_fr,name_ar),employees(first_name,last_name)').eq('school_id', schoolId).order('session_date',{ascending:false}).limit(30),
   ])
+  const activeLevels = (levels ?? []).filter((level: any) => level.is_active)
   const teachers = (staffJson as any[]) ?? []
   return <main className="page">
     <div className="page-header"><div><p className="page-subtitle">Formation spécialisée</p><h1 className="page-title">Tahfiz</h1><p className="page-subtitle">Niveaux, mémorisation, révisions, récitations, évaluations et progression.</p></div><Link className="button button-secondary" href="/tahfiz-arabe">Retour Tahfiz / Arabe</Link></div>
     {query.error ? <p className="error">{query.error}</p> : null}
-    {query.created || query.assigned || query.session || query.published ? <p className="success">Opération enregistrée.</p> : null}
+    {query.created || query.updated || query.assigned || query.session || query.published ? <p className="success">Opération enregistrée.</p> : null}
 
     <section className="grid grid-2">
       <article className="card"><h2>Créer un niveau Tahfiz</h2><form action={createTahfizLevel} className="grid grid-2">
@@ -37,12 +38,12 @@ export default async function TahfizPage({ searchParams }: { searchParams: Promi
         <div className="field"><label className="label">Description</label><input className="input" name="description" placeholder="Description facultative" /></div>
         <button className="button button-primary" type="submit">Créer le niveau</button>
       </form></article>
-      <article className="card"><h2>Niveaux configurés</h2>{levels?.length ? <div className="table-wrap"><table><thead><tr><th>Code</th><th>Niveau</th><th>Ordre</th></tr></thead><tbody>{levels.map((l:any)=><tr key={l.id}><td>{l.code}</td><td>{l.name}</td><td>{l.sequence_no}</td></tr>)}</tbody></table></div> : <p className="empty">Aucun niveau Tahfiz configuré.</p>}</article>
+      <article className="card"><h2>Niveaux configurés</h2>{levels?.length ? <div className="table-wrap"><table><thead><tr><th>Code</th><th>Niveau</th><th>Ordre</th><th>État</th><th></th></tr></thead><tbody>{levels.map((l:any)=><tr key={l.id}><td>{l.code}</td><td>{l.name}</td><td>{l.sequence_no}</td><td>{l.is_active ? 'Actif' : 'Inactif'}</td><td><details><summary>Modifier</summary><form action={updateTahfizLevel} className="grid" style={{minWidth:260,marginTop:8}}><input type="hidden" name="levelId" value={l.id}/><label className="field"><span className="label">Code</span><input className="input" name="code" defaultValue={l.code} required maxLength={60}/></label><label className="field"><span className="label">Nom</span><input className="input" name="name" defaultValue={l.name} required maxLength={160}/></label><label className="field"><span className="label">Ordre</span><input className="input" name="sequenceNo" type="number" min="0" defaultValue={l.sequence_no}/></label><label className="field"><span className="label">Description</span><input className="input" name="description" defaultValue={l.description ?? ''} maxLength={500}/></label><label><input type="checkbox" name="isActive" defaultChecked={l.is_active}/> Niveau actif</label><button className="button button-primary" type="submit">Enregistrer les modifications</button></form></details></td></tr>)}</tbody></table></div> : <p className="empty">Aucun niveau Tahfiz configuré.</p>}</article>
     </section>
 
     <section className="card" style={{marginTop:16}}><h2>Affecter / mettre à jour un élève</h2><p className="page-subtitle">La progression est calculée à partir des versets distincts enregistrés en nouvelle mémorisation, sur les 6 236 versets du Coran.</p><form action={assignStudentTahfiz} className="grid grid-3">
       <div className="field"><label className="label">Élève</label><select className="select" name="studentId" required><option value="">Choisir</option>{students?.map((s:any)=><option key={s.id} value={s.id}>{s.student_number} — {s.last_name} {s.first_name}</option>)}</select></div>
-      <div className="field"><label className="label">Niveau</label><select className="select" name="levelId"><option value="">Non défini</option>{levels?.map((l:any)=><option key={l.id} value={l.id}>{l.code} — {l.name}</option>)}</select></div>
+      <div className="field"><label className="label">Niveau</label><select className="select" name="levelId"><option value="">Non défini</option>{activeLevels.map((l:any)=><option key={l.id} value={l.id}>{l.code} — {l.name}</option>)}</select></div>
       <div className="field"><label className="label">Responsable</label><select className="select" name="teacherId"><option value="">Non défini</option>{teachers?.map((t:any)=><option key={t.id} value={t.id}>{t.last_name} {t.first_name} — {text(t.job_title)}</option>)}</select></div>
       <div className="field"><label className="label">Début</label><input className="input" name="startDate" type="date" /></div>
       

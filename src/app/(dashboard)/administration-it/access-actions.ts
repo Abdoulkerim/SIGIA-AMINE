@@ -22,7 +22,7 @@ function accessUrl(userId?: string, error?: string, updated?: string) {
 
 async function getAccessManager() {
   const context = await getCurrentUserContext()
-  const canManage = context?.roles.some(({ code }) => ['it_admin', 'super_admin', 'founder'].includes(code ?? ''))
+  const canManage = context?.roles.some(({ code }) => code === 'it_admin')
   if (!context || !canManage || !context.profile.school_id) return null
   return { context, schoolId: context.profile.school_id, supabase: await createClient() }
 }

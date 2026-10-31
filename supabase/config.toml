@@ -3,3 +3,6 @@ verify_jwt = true
 
 [functions.managed-create-user]
 verify_jwt = true
+
+[functions.managed-user-directory]
+verify_jwt = true

@@ -240,6 +240,10 @@ tr:last-child td { border-bottom: 0; }
 .nav-submenu { display: grid; gap: 2px; padding: 3px 0 7px 17px; margin-left: 18px; border-left: 1px solid rgba(255,211,79,.55); }
 .nav-link { min-height: 34px; padding: 7px 9px; color: #c8d8f5; font-size: 12px; }
 .nav-link > svg { flex: 0 0 auto; opacity: .82; }
+.nav-link-disabled { color: #8192ad; opacity: .52; cursor: not-allowed; }
+.nav-link-disabled > svg { opacity: .55; }
+.nav-section-disabled > .nav-section-trigger { color: #8192ad; opacity: .55; }
+.nav-section-disabled > .nav-section-trigger > svg { color: #8192ad; }
 .main { min-width: 0; }
 .topbar { min-height: 64px; background: #fff; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 24px; }
 .user-chip { display: flex; align-items: center; gap: 10px; }

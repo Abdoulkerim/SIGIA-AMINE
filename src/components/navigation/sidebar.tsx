@@ -240,9 +240,94 @@ function isCurrentPath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-export function Sidebar({ canAccessIT }: { canAccessIT: boolean }) {
+const routePermissions: Array<{ prefix: string; anyOf: string[] }> = [
+  { prefix: '/administration/eleves', anyOf: ['students.view', 'students.manage'] },
+  { prefix: '/administration/parents', anyOf: ['parents.view', 'parents.manage'] },
+  { prefix: '/administration/admissions', anyOf: ['enrollments.manage', 'enrollments.view', 'admissions.manage', 'admissions.view'] },
+  { prefix: '/administration/inscriptions', anyOf: ['enrollments.manage', 'enrollments.view', 'admissions.manage', 'admissions.view'] },
+  { prefix: '/administration/niveaux', anyOf: ['classes.manage', 'classes.view', 'levels.manage', 'levels.view'] },
+  { prefix: '/administration/classes', anyOf: ['classes.manage', 'classes.view'] },
+  { prefix: '/administration', anyOf: ['students.view', 'students.manage', 'parents.view', 'parents.manage', 'enrollments.manage', 'enrollments.view', 'admissions.manage', 'admissions.view', 'classes.manage', 'classes.view'] },
+  { prefix: '/pedagogie/matieres', anyOf: ['subjects.manage', 'subjects.view'] },
+  { prefix: '/pedagogie/affectations', anyOf: ['teachers.manage', 'teachers.view'] },
+  { prefix: '/pedagogie/emploi-du-temps', anyOf: ['timetable.manage', 'timetable.view'] },
+  { prefix: '/pedagogie/types-evaluations', anyOf: ['assessments.manage', 'assessments.view'] },
+  { prefix: '/pedagogie/evaluations', anyOf: ['assessments.manage', 'assessments.view', 'grades.enter', 'grades.view', 'grades.publish'] },
+  { prefix: '/pedagogie/bulletins', anyOf: ['report_cards.generate', 'report_cards.view', 'report_cards.publish', 'grades.view', 'grades.publish'] },
+  { prefix: '/pedagogie', anyOf: ['subjects.manage', 'subjects.view', 'teachers.manage', 'teachers.view', 'timetable.manage', 'timetable.view', 'assessments.manage', 'assessments.view', 'grades.enter', 'grades.view', 'grades.publish', 'report_cards.generate', 'report_cards.view'] },
+  { prefix: '/vie-scolaire/presences', anyOf: ['attendance.manage', 'attendance.view'] },
+  { prefix: '/vie-scolaire/justificatifs', anyOf: ['attendance.manage', 'attendance.view', 'absence_justifications.review', 'absence_justifications.view'] },
+  { prefix: '/vie-scolaire/discipline', anyOf: ['discipline.manage', 'discipline.view'] },
+  { prefix: '/vie-scolaire/suivi-educatif', anyOf: ['discipline.manage', 'discipline.view', 'followups.manage', 'followups.view'] },
+  { prefix: '/vie-scolaire/recompenses', anyOf: ['discipline.manage', 'rewards.manage', 'rewards.view'] },
+  { prefix: '/vie-scolaire', anyOf: ['attendance.manage', 'attendance.view', 'absence_justifications.view', 'discipline.manage', 'discipline.view', 'followups.view', 'rewards.view'] },
+  { prefix: '/finance/tarifs', anyOf: ['finance.manage'] },
+  { prefix: '/finance/factures', anyOf: ['finance.view', 'finance.manage'] },
+  { prefix: '/finance/paiements', anyOf: ['finance.view', 'finance.manage'] },
+  { prefix: '/finance/depenses', anyOf: ['expenses.manage'] },
+  { prefix: '/finance/caisse', anyOf: ['cash.manage'] },
+  { prefix: '/finance/impayes', anyOf: ['finance.view', 'finance.manage'] },
+  { prefix: '/finance', anyOf: ['finance.view', 'finance.manage', 'expenses.manage', 'cash.manage'] },
+  { prefix: '/personnel/enseignants', anyOf: ['teachers.manage', 'teachers.view'] },
+  { prefix: '/personnel/conges', anyOf: ['hr.manage', 'hr.view'] },
+  { prefix: '/personnel/formations', anyOf: ['hr.manage', 'hr.view'] },
+  { prefix: '/personnel/paie', anyOf: ['payroll.manage', 'payroll.view'] },
+  { prefix: '/personnel', anyOf: ['hr.manage', 'hr.view', 'teachers.manage', 'teachers.view'] },
+  { prefix: '/internat', anyOf: ['boarding.manage', 'boarding.view'] },
+  { prefix: '/restauration', anyOf: ['catering.manage', 'catering.view'] },
+  { prefix: '/stocks/demandes', anyOf: ['purchases.manage'] },
+  { prefix: '/stocks/commandes', anyOf: ['purchases.manage'] },
+  { prefix: '/stocks/receptions', anyOf: ['purchases.manage', 'purchases.view', 'stock.manage', 'stock.view'] },
+  { prefix: '/stocks/fournisseurs', anyOf: ['purchases.manage', 'purchases.view'] },
+  { prefix: '/stocks/factures', anyOf: ['purchases.manage', 'purchases.view'] },
+  { prefix: '/stocks', anyOf: ['stock.manage', 'stock.view', 'inventory.manage', 'purchases.manage', 'purchases.view'] },
+  { prefix: '/activites/agriculture', anyOf: ['agriculture.manage', 'agriculture.view'] },
+  { prefix: '/activites/elevage', anyOf: ['livestock.manage', 'livestock.view'] },
+  { prefix: '/activites', anyOf: ['agriculture.manage', 'agriculture.view', 'livestock.manage', 'livestock.view'] },
+  { prefix: '/tahfiz-arabe/tahfiz', anyOf: ['tahfiz.manage', 'tahfiz.view'] },
+  { prefix: '/tahfiz-arabe/arabe', anyOf: ['arabic.manage', 'arabic.view'] },
+  { prefix: '/tahfiz-arabe', anyOf: ['tahfiz.manage', 'tahfiz.view', 'arabic.manage', 'arabic.view'] },
+  { prefix: '/wushu', anyOf: ['wushu.manage', 'wushu.view', 'wushu.publish'] },
+  { prefix: '/communication/notifications', anyOf: [] },
+  { prefix: '/communication', anyOf: ['communication.manage'] },
+  { prefix: '/documents', anyOf: ['documents.view', 'documents.manage'] },
+  { prefix: '/statistiques/direction', anyOf: ['dashboard.direction', 'reports.view'] },
+  { prefix: '/statistiques/pedagogie', anyOf: ['dashboard.pedagogy', 'reports.view'] },
+  { prefix: '/statistiques/finance', anyOf: ['dashboard.finance', 'finance.reports', 'reports.view'] },
+  { prefix: '/statistiques/internat', anyOf: ['dashboard.boarding', 'boarding.view', 'reports.view'] },
+  { prefix: '/statistiques/activites', anyOf: ['dashboard.activities', 'agriculture.view', 'livestock.view', 'reports.view'] },
+  { prefix: '/statistiques', anyOf: ['reports.view', 'dashboard.direction', 'dashboard.pedagogy', 'dashboard.finance', 'dashboard.boarding', 'dashboard.activities'] },
+  { prefix: '/ia/alertes', anyOf: ['ai.alerts.review', 'ai.manage', 'ai.use'] },
+  { prefix: '/ia/prompts', anyOf: ['ai.manage'] },
+  { prefix: '/ia', anyOf: ['ai.use', 'ai.manage'] },
+  { prefix: '/administration-it/audit', anyOf: ['audit.view'] },
+  { prefix: '/administration-it/parametres', anyOf: ['settings.manage'] },
+  { prefix: '/administration-it/roles', anyOf: ['users.roles.manage'] },
+  { prefix: '/administration-it/acces', anyOf: ['users.roles.manage'] },
+  { prefix: '/administration-it/cartes', anyOf: ['students.view', 'hr.manage'] },
+  { prefix: '/administration-it/systeme', anyOf: ['settings.manage', 'audit.view'] },
+  { prefix: '/administration-it', anyOf: ['users.manage', 'users.roles.manage', 'audit.view', 'settings.manage'] },
+]
+
+function itemIsAllowed(href: string, permissionCodes: Set<string>, canAccessIT: boolean) {
+  if (href.startsWith('/administration-it/utilisateurs')) return canAccessIT
+  if (href.startsWith('/administration-it') && !canAccessIT) return false
+  const rule = routePermissions.find(({ prefix }) => href === prefix || href.startsWith(`${prefix}/`))
+  if (!rule) return false
+  if (href === '/communication/notifications') return true
+  return rule.anyOf.some((code) => permissionCodes.has(code))
+}
+
+export function Sidebar({ canAccessIT, permissionCodes }: { canAccessIT: boolean; permissionCodes: string[] }) {
   const pathname = usePathname()
-  const visibleGroups = canAccessIT ? groups : groups.filter((group) => group.label !== 'Administration technique')
+  const permissionSet = new Set(permissionCodes)
+  const visibleGroups = groups.map((group) => ({
+    ...group,
+    items: group.items.map((item) => ({
+      ...item,
+      allowed: itemIsAllowed(item.href, permissionSet, canAccessIT),
+    })),
+  }))
 
   return (
     <aside className="sidebar">
@@ -266,11 +351,13 @@ export function Sidebar({ canAccessIT }: { canAccessIT: boolean }) {
         <div className="nav-groups">
           {visibleGroups.map((group) => {
             const GroupIcon = group.icon
-            const sectionIsActive = group.items.some((item) => isCurrentPath(pathname, item.href))
+            const sectionIsActive = group.items.some((item) => item.allowed && isCurrentPath(pathname, item.href))
+
+            const sectionAllowed = group.items.some((item) => item.allowed)
 
             return (
-              <details className="nav-section" key={group.label} open={sectionIsActive}>
-                <summary className="nav-section-trigger">
+              <details className={`nav-section${sectionAllowed ? '' : ' nav-section-disabled'}`} key={group.label} open={sectionIsActive}>
+                <summary className="nav-section-trigger" aria-disabled={!sectionAllowed}>
                   <GroupIcon size={17} aria-hidden="true" />
                   <span>{group.label}</span>
                   <ChevronDown className="nav-chevron" size={14} aria-hidden="true" />
@@ -279,16 +366,14 @@ export function Sidebar({ canAccessIT }: { canAccessIT: boolean }) {
                   {group.items.map((item) => {
                     const ItemIcon = item.icon
                     const itemIsActive = isCurrentPath(pathname, item.href)
-                    return (
-                      <Link
-                        className="nav-link"
-                        href={item.href}
-                        key={item.href}
-                        aria-current={itemIsActive ? 'page' : undefined}
-                      >
-                        <ItemIcon size={15} aria-hidden="true" />
-                        <span>{item.label}</span>
+                    return item.allowed ? (
+                      <Link className="nav-link" href={item.href} key={item.href} aria-current={itemIsActive ? 'page' : undefined}>
+                        <ItemIcon size={15} aria-hidden="true" /><span>{item.label}</span>
                       </Link>
+                    ) : (
+                      <span className="nav-link nav-link-disabled" key={item.href} aria-disabled="true" title="Vous n’avez pas accès à cette page">
+                        <ItemIcon size={15} aria-hidden="true" /><span>{item.label}</span>
+                      </span>
                     )
                   })}
                 </div>

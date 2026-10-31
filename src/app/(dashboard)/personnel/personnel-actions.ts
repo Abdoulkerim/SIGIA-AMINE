@@ -55,6 +55,66 @@ export async function createEmployee(formData: FormData) {
   redirect(`/personnel/employes/${data}?created=1`)
 }
 
+export async function updateEmployee(formData: FormData) {
+  const schema = z.object({
+    employeeId: uuid,
+    employeeNumber: z.string().trim().min(1).max(50),
+    firstName: z.string().trim().min(1).max(120),
+    lastName: z.string().trim().min(1).max(120),
+    jobTitle: z.string().trim().max(160).optional(),
+    department: z.string().trim().max(160).optional(),
+    qualification: z.string().trim().max(255).optional(),
+    hireDate: z.string().optional(),
+    gender: z.enum(['male', 'female', 'other']).optional(),
+    dateOfBirth: z.string().optional(),
+    placeOfBirth: z.string().trim().max(120).optional(),
+    phone: z.string().trim().max(50).optional(),
+    email: z.string().trim().email().max(255).optional(),
+    address: z.string().trim().max(500).optional(),
+  }).safeParse({
+    employeeId: formData.get('employeeId'),
+    employeeNumber: formData.get('employeeNumber'),
+    firstName: formData.get('firstName'),
+    lastName: formData.get('lastName'),
+    jobTitle: formData.get('jobTitle') || undefined,
+    department: formData.get('department') || undefined,
+    qualification: formData.get('qualification') || undefined,
+    hireDate: formData.get('hireDate') || undefined,
+    gender: formData.get('gender') || undefined,
+    dateOfBirth: formData.get('dateOfBirth') || undefined,
+    placeOfBirth: formData.get('placeOfBirth') || undefined,
+    phone: formData.get('phone') || undefined,
+    email: formData.get('email') || undefined,
+    address: formData.get('address') || undefined,
+  })
+  if (!schema.success) fail('/personnel/employes', 'Vérifiez les informations du dossier employé.')
+  const input = schema.data
+
+  const supabase = await client()
+  const { error } = await (supabase as any).rpc('update_employee', {
+    p_employee_id: input.employeeId,
+    p_employee_number: input.employeeNumber,
+    p_first_name: input.firstName,
+    p_last_name: input.lastName,
+    p_job_title: input.jobTitle ?? null,
+    p_department: input.department ?? null,
+    p_qualification: input.qualification ?? null,
+    p_hire_date: input.hireDate || null,
+    p_gender: input.gender ?? null,
+    p_date_of_birth: input.dateOfBirth || null,
+    p_place_of_birth: input.placeOfBirth ?? null,
+    p_phone: input.phone ?? null,
+    p_email: input.email ?? null,
+    p_address: input.address ?? null,
+  })
+  if (error) fail(`/personnel/employes/${input.employeeId}`, error.message)
+
+  revalidatePath('/personnel')
+  revalidatePath('/personnel/employes')
+  revalidatePath(`/personnel/employes/${input.employeeId}`)
+  redirect(`/personnel/employes/${input.employeeId}?updated=1`)
+}
+
 export async function setEmployeeStatus(formData: FormData) {
   const employeeId = uuid.safeParse(formData.get('employeeId'))
   const status = z.enum(['active', 'inactive', 'suspended', 'terminated', 'archived']).safeParse(formData.get('status'))

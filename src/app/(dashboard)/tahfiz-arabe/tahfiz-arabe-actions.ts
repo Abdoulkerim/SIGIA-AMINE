@@ -27,6 +27,28 @@ export async function createTahfizLevel(formData: FormData) {
   redirect('/tahfiz-arabe/tahfiz?created=1')
 }
 
+export async function updateTahfizLevel(formData: FormData) {
+  const id = uuid.safeParse(formData.get('levelId'))
+  const code = z.string().trim().min(1).max(60).safeParse(formData.get('code'))
+  const name = z.string().trim().min(1).max(160).safeParse(formData.get('name'))
+  const sequence = num.int().min(0).safeParse(formData.get('sequenceNo') || 0)
+  const description = z.string().trim().max(500).optional().safeParse(formData.get('description') || undefined)
+  if (![id, code, name, sequence, description].every((value) => value.success)) fail('/tahfiz-arabe/tahfiz', 'Vérifiez les informations du niveau Tahfiz.')
+  const supabase = await createClient()
+  const { error } = await (supabase as any).rpc('update_tahfiz_level', {
+    p_level_id: id.data,
+    p_code: code.data,
+    p_name: name.data,
+    p_sequence_no: sequence.data,
+    p_description: description.data ?? null,
+    p_is_active: formData.get('isActive') === 'on',
+  })
+  if (error) fail('/tahfiz-arabe/tahfiz', error.message)
+  revalidatePath('/tahfiz-arabe/tahfiz')
+  revalidatePath('/tahfiz-arabe')
+  redirect('/tahfiz-arabe/tahfiz?updated=1')
+}
+
 export async function assignStudentTahfiz(formData: FormData) {
   const studentId = uuid.safeParse(formData.get('studentId'))
   const levelId = z.string().uuid().optional().safeParse(formData.get('levelId') || undefined)
@@ -87,6 +109,28 @@ export async function createArabicLevel(formData: FormData) {
   revalidatePath('/tahfiz-arabe/arabe')
   revalidatePath('/tahfiz-arabe')
   redirect('/tahfiz-arabe/arabe?created=1')
+}
+
+export async function updateArabicLevel(formData: FormData) {
+  const id = uuid.safeParse(formData.get('levelId'))
+  const code = z.string().trim().min(1).max(60).safeParse(formData.get('code'))
+  const name = z.string().trim().min(1).max(160).safeParse(formData.get('name'))
+  const sequence = num.int().min(0).safeParse(formData.get('sequenceNo') || 0)
+  const description = z.string().trim().max(500).optional().safeParse(formData.get('description') || undefined)
+  if (![id, code, name, sequence, description].every((value) => value.success)) fail('/tahfiz-arabe/arabe', 'Vérifiez les informations du niveau Arabe.')
+  const supabase = await createClient()
+  const { error } = await (supabase as any).rpc('update_arabic_level', {
+    p_level_id: id.data,
+    p_code: code.data,
+    p_name: name.data,
+    p_sequence_no: sequence.data,
+    p_description: description.data ?? null,
+    p_is_active: formData.get('isActive') === 'on',
+  })
+  if (error) fail('/tahfiz-arabe/arabe', error.message)
+  revalidatePath('/tahfiz-arabe/arabe')
+  revalidatePath('/tahfiz-arabe')
+  redirect('/tahfiz-arabe/arabe?updated=1')
 }
 
 export async function assignStudentArabic(formData: FormData) {

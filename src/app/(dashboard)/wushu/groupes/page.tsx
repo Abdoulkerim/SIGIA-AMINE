@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
-import { createWushuGroup } from '../wushu-actions'
+import { createWushuGroup, updateWushuGroup } from '../wushu-actions'
 
 const stages = [
   ['maternelle', 'Maternelle'],
@@ -13,7 +13,7 @@ const stages = [
 
 const stageLabels = Object.fromEntries(stages) as Record<string, string>
 
-export default async function WushuGroupsPage({ searchParams }: { searchParams: Promise<{ error?: string; created?: string }> }) {
+export default async function WushuGroupsPage({ searchParams }: { searchParams: Promise<{ error?: string; created?: string; updated?: string }> }) {
   const [params, context, supabase] = await Promise.all([searchParams, getCurrentUserContext(), createClient()])
   const isSuperAdmin = context?.roles.some(({ code }) => code === 'super_admin') ?? false
   const userStage = context?.profile.education_stage ?? null
@@ -31,6 +31,7 @@ export default async function WushuGroupsPage({ searchParams }: { searchParams: 
     </div>
     {params.error ? <p className="error">{params.error}</p> : null}
     {params.created ? <p className="success">Groupe créé.</p> : null}
+    {params.updated ? <p className="success">Groupe mis à jour.</p> : null}
     {!isSuperAdmin && !userStage ? <p className="error">Attribuez d’abord un cycle à votre compte dans <Link href="/administration-it/acces">Administration IT → Accès</Link> pour créer un groupe Wushu.</p> : null}
 
     <section className="card">
@@ -47,7 +48,7 @@ export default async function WushuGroupsPage({ searchParams }: { searchParams: 
 
     <section className="card" style={{marginTop:16}}>
       <h2>Groupes enregistrés</h2>
-      {groups?.length ? <div className="table-wrap"><table><thead><tr><th>Code</th><th>Nom</th><th>Cycle</th><th>Niveau</th><th>Coach</th><th>Actif</th></tr></thead><tbody>{groups.map(g => <tr key={g.id}><td>{g.code || '—'}</td><td>{g.name}</td><td>{g.education_stage ? stageLabels[g.education_stage] ?? g.education_stage : '—'}</td><td>{g.level || '—'}</td><td>{coaches?.find(c => c.id === g.coach_employee_id)?.last_name || '—'}</td><td><span className="badge">{g.is_active ? 'Actif' : 'Inactif'}</span></td></tr>)}</tbody></table></div> : <p className="empty">Aucun groupe.</p>}
+      {groups?.length ? <div className="table-wrap"><table><thead><tr><th>Code</th><th>Nom</th><th>Cycle</th><th>Niveau</th><th>Coach</th><th>Actif</th><th></th></tr></thead><tbody>{groups.map(g => <tr key={g.id}><td>{g.code || '—'}</td><td>{g.name}</td><td>{g.education_stage ? stageLabels[g.education_stage] ?? g.education_stage : '—'}</td><td>{g.level || '—'}</td><td>{coaches?.find(c => c.id === g.coach_employee_id)?.last_name || '—'}</td><td><span className="badge">{g.is_active ? 'Actif' : 'Inactif'}</span></td><td><details><summary>Modifier</summary><form action={updateWushuGroup} className="grid" style={{minWidth:260,marginTop:8}}><input type="hidden" name="groupId" value={g.id}/><label className="field"><span className="label">Code</span><input className="input" name="code" defaultValue={g.code ?? ''} maxLength={60}/></label><label className="field"><span className="label">Nom</span><input className="input" name="name" defaultValue={g.name} required maxLength={160}/></label><label className="field"><span className="label">Niveau / grade</span><input className="input" name="level" defaultValue={g.level ?? ''} maxLength={120}/></label><label className="field"><span className="label">Coach</span><select className="select" name="coachEmployeeId" defaultValue={g.coach_employee_id ?? ''}><option value="">Aucun</option>{coaches?.map(c => <option key={c.id} value={c.id}>{c.last_name} {c.first_name} · {c.employee_number}</option>)}</select></label><label><input type="checkbox" name="isActive" defaultChecked={g.is_active}/> Groupe actif</label><button className="button button-primary" type="submit">Enregistrer les modifications</button></form></details></td></tr>)}</tbody></table></div> : <p className="empty">Aucun groupe.</p>}
     </section>
   </main>
 }
