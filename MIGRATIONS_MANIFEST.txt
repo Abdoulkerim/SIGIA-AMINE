@@ -54,3 +54,4 @@
 037 | 20261102151232_allow_staff_cycle_access_with_parent_role.sql | Conserve l’accès au cycle des comptes qui cumulent un rôle parent et un rôle métier.
 038 | 20261102170000_add_wushu_coach_lookup.sql | Ajoute une lecture limitée des coachs pour les formulaires Wushu.
 039 | 20261102180000_update_employee_with_teacher_role.sql | Permet à un employé d’avoir aussi un profil enseignant partagé dans tous les cycles.
+040 | 20261102190000_fix_staff_student_and_employee_creation_rls.sql | Corrige les blocages RLS des élèves par cycle et rend les dossiers employés communs à l’établissement.
