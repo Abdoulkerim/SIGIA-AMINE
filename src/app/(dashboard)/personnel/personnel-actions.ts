@@ -71,6 +71,11 @@ export async function updateEmployee(formData: FormData) {
     phone: z.string().trim().max(50).optional(),
     email: z.string().trim().email().max(255).optional(),
     address: z.string().trim().max(500).optional(),
+    speciality: z.string().trim().max(255).optional(),
+    diploma: z.string().trim().max(255).optional(),
+    pedagogicalRole: z.string().trim().max(255).optional(),
+    biography: z.string().trim().max(5000).optional(),
+    enableTeacherProfile: z.boolean(),
   }).safeParse({
     employeeId: formData.get('employeeId'),
     employeeNumber: formData.get('employeeNumber'),
@@ -86,12 +91,17 @@ export async function updateEmployee(formData: FormData) {
     phone: formData.get('phone') || undefined,
     email: formData.get('email') || undefined,
     address: formData.get('address') || undefined,
+    speciality: formData.get('speciality') || undefined,
+    diploma: formData.get('diploma') || undefined,
+    pedagogicalRole: formData.get('pedagogicalRole') || undefined,
+    biography: formData.get('biography') || undefined,
+    enableTeacherProfile: formData.get('enableTeacherProfile') === 'on',
   })
   if (!schema.success) fail('/personnel/employes', 'Vérifiez les informations du dossier employé.')
   const input = schema.data
 
   const supabase = await client()
-  const { error } = await (supabase as any).rpc('update_employee', {
+  const { error } = await (supabase as any).rpc('update_employee_with_teacher_role', {
     p_employee_id: input.employeeId,
     p_employee_number: input.employeeNumber,
     p_first_name: input.firstName,
@@ -106,11 +116,18 @@ export async function updateEmployee(formData: FormData) {
     p_phone: input.phone ?? null,
     p_email: input.email ?? null,
     p_address: input.address ?? null,
+    p_enable_teacher_profile: input.enableTeacherProfile,
+    p_speciality: input.speciality ?? null,
+    p_diploma: input.diploma ?? null,
+    p_pedagogical_role: input.pedagogicalRole ?? null,
+    p_biography: input.biography ?? null,
   })
   if (error) fail(`/personnel/employes/${input.employeeId}`, error.message)
 
   revalidatePath('/personnel')
   revalidatePath('/personnel/employes')
+  revalidatePath('/personnel/enseignants')
+  revalidatePath('/pedagogie/affectations')
   revalidatePath(`/personnel/employes/${input.employeeId}`)
   redirect(`/personnel/employes/${input.employeeId}?updated=1`)
 }

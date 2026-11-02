@@ -3,6 +3,10 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
 import { ReportActions } from '@/components/reports/report-actions'
 
+function genderLabel(gender: string | null | undefined) {
+  return gender === 'male' ? 'Masculin' : gender === 'female' ? 'Féminin' : gender === 'other' ? 'Autre' : '—'
+}
+
 export default async function StudentsPage({ searchParams }: { searchParams: Promise<{ created?: string; classAssigned?: string; classId?: string }> }) {
   const context = await getCurrentUserContext()
   if (!context?.profile.school_id) return null
@@ -44,7 +48,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
           <div className="field" style={{ alignSelf: 'end' }}><button className="button button-secondary" type="submit">Afficher</button></div>
         </form>
       </section>
-      <ReportActions title={`Liste des élèves${params.classId ? ` — ${(classes ?? []).find((item: any) => item.id === params.classId)?.name ?? ''}` : ''}`} fileName="liste-eleves" headers={['Matricule', 'Nom', 'Prénom', 'Classe', 'Genre', 'Naissance', 'Régime', 'Statut']} rows={shownStudents.map((student) => [student.student_number, student.last_name, student.first_name, classByStudent.get(student.id) ?? 'Non inscrit', student.gender, student.date_of_birth, student.residence_type, student.status])} />
+      <ReportActions title={`Liste des élèves${params.classId ? ` — ${(classes ?? []).find((item: any) => item.id === params.classId)?.name ?? ''}` : ''}`} fileName="liste-eleves" headers={['Matricule', 'Nom', 'Prénom', 'Classe', 'Genre', 'Naissance', 'Régime', 'Statut']} rows={shownStudents.map((student) => [student.student_number, student.last_name, student.first_name, classByStudent.get(student.id) ?? 'Non inscrit', genderLabel(student.gender), student.date_of_birth, student.residence_type, student.status])} />
 
       {!shownStudents.length ? (
         <section className="card empty">
@@ -75,7 +79,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
                   <td>{student.last_name}</td>
                   <td>{student.first_name}</td>
                   <td>{classByStudent.get(student.id) ?? '—'}</td>
-                  <td>{student.gender ?? '—'}</td>
+                  <td>{genderLabel(student.gender)}</td>
                   <td>{student.date_of_birth ?? '—'}</td>
                   <td>{student.residence_type}</td>
                   <td><span className="badge">{student.status}</span></td>

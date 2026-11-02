@@ -50,3 +50,7 @@
 034 | 20261029090000_update_employee_profile.sql | Modification sécurisée des dossiers employés.
 035 | 20261029170116_update_specialized_levels_and_wushu_groups.sql | Modification sécurisée des niveaux Arabe et Tahfiz, et des groupes Wushu.
 036 | 20261029170238_add_tahfiz_level_description.sql | Ajout de la description configurable aux niveaux Tahfiz existants.
+
+037 | 20261102151232_allow_staff_cycle_access_with_parent_role.sql | Conserve l’accès au cycle des comptes qui cumulent un rôle parent et un rôle métier.
+038 | 20261102170000_add_wushu_coach_lookup.sql | Ajoute une lecture limitée des coachs pour les formulaires Wushu.
+039 | 20261102180000_update_employee_with_teacher_role.sql | Permet à un employé d’avoir aussi un profil enseignant partagé dans tous les cycles.

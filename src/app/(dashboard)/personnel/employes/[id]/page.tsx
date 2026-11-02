@@ -14,12 +14,16 @@ export default async function EmployeeDetailPage({
   const context = await getCurrentUserContext()
   if (!context?.profile.school_id) return null
   const [{ id }, query, supabase] = await Promise.all([params, searchParams, createClient()])
-  const [{ data, error }, { data: roleAssignments }] = await Promise.all([
+  const [{ data, error }, { data: roleAssignments }, { data: teacherProfile }] = await Promise.all([
     supabase.rpc('get_employee_dossier', { p_employee_id: id }),
     supabase.from('user_roles')
       .select('school_id,roles(role_permissions(permissions(code)))')
       .eq('user_id', context.profile.id)
       .eq('is_active', true),
+    supabase.from('teacher_profiles')
+      .select('speciality,diploma,pedagogical_role,biography')
+      .eq('employee_id', id)
+      .maybeSingle(),
   ])
   if (error || !data) notFound()
 
@@ -63,6 +67,24 @@ export default async function EmployeeDetailPage({
             <div className="field"><label className="label" htmlFor="lastName">Nom *</label><input className="input" id="lastName" name="lastName" defaultValue={employee.last_name ?? ''} required maxLength={120} /></div>
             <div className="field"><label className="label" htmlFor="department">Service</label><input className="input" id="department" name="department" defaultValue={employee.department ?? ''} maxLength={160} /></div>
             <div className="field"><label className="label" htmlFor="qualification">Qualification</label><input className="input" id="qualification" name="qualification" defaultValue={employee.qualification ?? ''} maxLength={255} /></div>
+            <div className="field" style={{ gridColumn: '1 / -1' }}>
+              <label className="label" htmlFor="enableTeacherProfile">Fonction supplémentaire</label>
+              {teacherProfile ? <>
+                <input type="hidden" name="enableTeacherProfile" value="on" />
+                <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input id="enableTeacherProfile" type="checkbox" checked readOnly />
+                  Cet employé exerce aussi comme enseignant
+                </label>
+              </> : <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input id="enableTeacherProfile" type="checkbox" name="enableTeacherProfile" />
+                Ajouter aussi un profil enseignant à cet employé
+              </label>}
+              <p className="page-subtitle">Le profil enseignant est rattaché à l’employé pour l’établissement entier et peut être affecté dans tous les cycles.</p>
+            </div>
+            <div className="field"><label className="label" htmlFor="speciality">Discipline / spécialité enseignée</label><input className="input" id="speciality" name="speciality" defaultValue={teacherProfile?.speciality ?? ''} maxLength={255} /></div>
+            <div className="field"><label className="label" htmlFor="diploma">Diplôme pédagogique</label><input className="input" id="diploma" name="diploma" defaultValue={teacherProfile?.diploma ?? ''} maxLength={255} /></div>
+            <div className="field"><label className="label" htmlFor="pedagogicalRole">Rôle pédagogique</label><input className="input" id="pedagogicalRole" name="pedagogicalRole" defaultValue={teacherProfile?.pedagogical_role ?? ''} maxLength={255} /></div>
+            <div className="field" style={{ gridColumn: '1 / -1' }}><label className="label" htmlFor="biography">Observations pédagogiques</label><textarea className="input" id="biography" name="biography" rows={3} defaultValue={teacherProfile?.biography ?? ''} maxLength={5000} /></div>
             <div className="field"><label className="label" htmlFor="gender">Genre</label><select className="select" id="gender" name="gender" defaultValue={employee.gender ?? ''}><option value="">Non renseigné</option><option value="male">Masculin</option><option value="female">Féminin</option><option value="other">Autre</option></select></div>
             <div className="field"><label className="label" htmlFor="hireDate">Date d’embauche</label><input className="input" id="hireDate" name="hireDate" type="date" defaultValue={employee.hire_date ?? ''} /></div>
             <div className="field"><label className="label" htmlFor="dateOfBirth">Date de naissance</label><input className="input" id="dateOfBirth" name="dateOfBirth" type="date" defaultValue={employee.date_of_birth ?? ''} /></div>

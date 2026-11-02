@@ -20,10 +20,11 @@ export default async function WushuGroupsPage({ searchParams }: { searchParams: 
   const availableStages = isSuperAdmin ? stages : stages.filter(([value]) => value === userStage)
   const defaultStage = availableStages.length === 1 ? availableStages[0][0] : ''
 
-  const [{ data: groups }, { data: coaches }] = await Promise.all([
+  const [{ data: groups }, { data: coachesData }] = await Promise.all([
     supabase.from('wushu_groups').select('id,code,name,level,education_stage,coach_employee_id,is_active,created_at').order('name'),
-    supabase.from('employees').select('id,first_name,last_name,employee_number').eq('status','active').order('last_name').limit(200),
+    (supabase as any).rpc('list_wushu_coaches'),
   ])
+  const coaches = coachesData as { id: string; first_name: string; last_name: string; employee_number: string | null }[] | null
 
   return <main className="page">
     <div className="page-header">
