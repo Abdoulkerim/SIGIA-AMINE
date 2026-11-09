@@ -3,6 +3,7 @@ import { FunctionsHttpError } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { createInvoice } from '../../finance-actions'
 import { InvoiceFeeFields } from './invoice-fee-fields'
+import { InvoiceStudentFields } from './invoice-student-fields'
 
 export default async function NewInvoicePage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const query = await searchParams
@@ -20,6 +21,8 @@ export default async function NewInvoicePage({ searchParams }: { searchParams: P
     } catch { /* Réponse non JSON. */ }
   }
   const students = studentResult?.students ?? []
+  const classes = studentResult?.classes ?? []
+  const enrollments = studentResult?.enrollments ?? []
   const today = new Date().toISOString().slice(0, 10)
 
   return (
@@ -45,7 +48,7 @@ export default async function NewInvoicePage({ searchParams }: { searchParams: P
 
       <form className="card" action={createInvoice}>
         <div className="grid grid-2">
-          <div className="field"><label className="label" htmlFor="studentId">Élève</label><select className="select" id="studentId" name="studentId" required defaultValue=""><option value="" disabled>Sélectionner un élève</option>{students.map((student: any) => <option key={student.id} value={student.id}>{student.student_number} • {student.first_name} {student.last_name}</option>)}</select></div>
+          <InvoiceStudentFields students={students} classes={classes ?? []} enrollments={enrollments ?? []} />
           <div className="field"><label className="label" htmlFor="parentId">Parent payeur (facultatif)</label><select className="select" id="parentId" name="parentId" defaultValue=""><option value="">Aucun parent sélectionné</option>{parents?.map((parent: any) => <option key={parent.id} value={parent.id}>{parent.last_name} {parent.first_name}{parent.phone ? ` • ${parent.phone}` : ''}</option>)}</select></div>
           <InvoiceFeeFields fees={(fees ?? []).map((fee: any) => ({ ...fee, default_amount: fee.default_amount == null ? null : Number(fee.default_amount) }))} />
           <div className="field"><label className="label" htmlFor="issueDate">Date d’émission</label><input className="input" id="issueDate" type="date" name="issueDate" defaultValue={today} required /></div>

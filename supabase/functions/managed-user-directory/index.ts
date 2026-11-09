@@ -44,7 +44,20 @@ export default {
         .eq('school_id', caller.school_id)
         .order('last_name').order('first_name').limit(1000)
       if (studentsError) return errorResponse('Impossible de charger les élèves de cette école.', 500)
-      return Response.json({ students: students ?? [] })
+      const { data: years } = await ctx.supabaseAdmin.from('school_years')
+        .select('id,is_current').eq('school_id', caller.school_id).order('start_date', { ascending: false })
+      const currentYear = (years ?? []).find((year: any) => year.is_current) ?? years?.[0]
+      let classes: any[] = []
+      let enrollments: any[] = []
+      if (currentYear) {
+        const [{ data: classRows }, { data: enrollmentRows }] = await Promise.all([
+          ctx.supabaseAdmin.from('classes').select('id,name,code').eq('school_id', caller.school_id).eq('school_year_id', currentYear.id).order('name'),
+          ctx.supabaseAdmin.from('enrollments').select('student_id,class_id').eq('school_id', caller.school_id).eq('school_year_id', currentYear.id).eq('status', 'enrolled'),
+        ])
+        classes = classRows ?? []
+        enrollments = enrollmentRows ?? []
+      }
+      return Response.json({ students: students ?? [], classes, enrollments })
     }
 
     const { data: assignments, error: assignmentsError } = await ctx.supabaseAdmin
