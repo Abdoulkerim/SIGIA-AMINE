@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
 import { createAssessment } from '../../pedagogie-actions'
+import { PeriodFields } from './period-fields'
 
 export default async function NewAssessmentPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const context = await getCurrentUserContext()
@@ -18,7 +19,6 @@ export default async function NewAssessmentPage({ searchParams }: { searchParams
     supabase.from('assessment_types').select('id,name').eq('school_id', schoolId).eq('is_active',true).order('name'),
   ])
   const currentYear = years?.find(y=>y.is_current) ?? years?.[0]
-  const openPeriods = (periods ?? []).filter(p => !p.is_closed)
   return (
     <main className="page">
       <div className="page-header"><div><h1 className="page-title">Nouvelle évaluation</h1><p className="page-subtitle">Le serveur vérifiera la cohérence année/période/classe/matière/enseignant.</p></div><Link className="button button-secondary" href="/pedagogie/evaluations">Retour</Link></div>
@@ -27,8 +27,7 @@ export default async function NewAssessmentPage({ searchParams }: { searchParams
       <section className="card">
         <form action={createAssessment}>
           <div className="grid grid-2">
-            <Field label="Année scolaire"><select className="select" name="schoolYearId" defaultValue={currentYear?.id ?? ''} required>{(years ?? []).map(y=><option key={y.id} value={y.id}>{y.name}</option>)}</select></Field>
-            <Field label="Période"><select className="select" name="periodId" required><option value="">Sélectionner</option>{openPeriods.map(p=><option key={p.id} value={p.id}>{p.name} ({p.start_date} → {p.end_date})</option>)}</select></Field>
+            <PeriodFields years={years ?? []} periods={periods ?? []} initialYearId={currentYear?.id ?? ''} />
             <Field label="Classe"><select className="select" name="classId" required><option value="">Sélectionner</option>{(classes ?? []).map(c=><option key={c.id} value={c.id}>{c.name} ({c.code})</option>)}</select></Field>
             <Field label="Matière"><select className="select" name="subjectId" required><option value="">Sélectionner</option>{(subjects ?? []).map(s=><option key={s.id} value={s.id}>{s.name} ({s.code})</option>)}</select></Field>
             <Field label="Enseignant"><select className="select" name="teacherId" required><option value="">Sélectionner</option>{(teachers ?? []).map(t=><option key={t.id} value={t.id}>{t.last_name} {t.first_name} ({t.employee_number})</option>)}</select></Field>

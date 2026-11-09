@@ -1,0 +1,7 @@
+BEGIN;
+
+REVOKE MAINTAIN, REFERENCES, TRIGGER, TRUNCATE
+ON TABLE public.employees
+FROM authenticated;
+
+COMMIT;

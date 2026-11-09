@@ -22,18 +22,38 @@ export default {
     if (!callerId) return errorResponse('Session invalide. Reconnectez-vous.', 401)
 
     const { data: caller, error: callerError } = await ctx.supabaseAdmin
-      .from('users').select('status').eq('id', callerId).maybeSingle()
+      .from('users').select('status,school_id').eq('id', callerId).maybeSingle()
     if (callerError) return errorResponse('Impossible de vérifier votre compte.', 500)
     if (caller?.status !== 'active') return errorResponse('Votre compte est inactif.', 403)
+
+    const action = body.action
+    if (action === 'invoice-students') {
+      if (!caller.school_id) return errorResponse('Aucune école n’est associée à ce compte.', 403)
+      const { data: assignments, error: assignmentsError } = await ctx.supabaseAdmin
+        .from('user_roles').select('school_id,roles(role_permissions(permissions(code)))')
+        .eq('user_id', callerId).eq('is_active', true)
+      if (assignmentsError) return errorResponse('Impossible de vérifier vos autorisations financières.', 500)
+      const canManageFinance = (assignments ?? []).some((assignment: any) =>
+        (assignment.school_id === null || assignment.school_id === caller.school_id)
+        && (assignment.roles?.role_permissions ?? []).some((item: any) => item.permissions?.code === 'finance.manage'),
+      )
+      if (!canManageFinance) return errorResponse('La permission « Gérer finance » est requise pour facturer.', 403)
+
+      const { data: students, error: studentsError } = await ctx.supabaseAdmin.from('students')
+        .select('id,student_number,first_name,last_name')
+        .eq('school_id', caller.school_id)
+        .order('last_name').order('first_name').limit(1000)
+      if (studentsError) return errorResponse('Impossible de charger les élèves de cette école.', 500)
+      return Response.json({ students: students ?? [] })
+    }
 
     const { data: assignments, error: assignmentsError } = await ctx.supabaseAdmin
       .from('user_roles').select('roles(code)').eq('user_id', callerId).eq('is_active', true)
     if (assignmentsError) return errorResponse('Impossible de vérifier vos autorisations.', 500)
-    if (!(assignments ?? []).some((assignment: any) => assignment.roles?.code === 'it_admin')) {
-      return errorResponse('Seul un Administrateur informatique peut gérer et consulter les comptes.', 403)
+    if (!(assignments ?? []).some((assignment: any) => ['it_admin', 'super_admin'].includes(assignment.roles?.code))) {
+      return errorResponse('Seul un Administrateur informatique ou système peut gérer et consulter les comptes.', 403)
     }
 
-    const action = body.action
     if (action === 'list') {
       const { data: schools, error: schoolsError } = await ctx.supabaseAdmin
         .from('schools').select('id,name,code,is_active').order('name')
@@ -72,6 +92,23 @@ export default {
       }
 
       return Response.json({ schools: schools ?? [], users })
+    }
+
+    if (action === 'set-password') {
+      const userId = typeof body.userId === 'string' ? body.userId : ''
+      const password = typeof body.password === 'string' ? body.password : ''
+      if (!uuid.test(userId)) return errorResponse('Utilisateur invalide.', 400)
+      if (password.length < 10 || password.length > 128) return errorResponse('Le mot de passe doit contenir entre 10 et 128 caractères.', 400)
+
+      const { data: target, error: targetError } = await ctx.supabaseAdmin
+        .from('users').select('id').eq('id', userId).maybeSingle()
+      if (targetError) return errorResponse('Impossible de vérifier le compte ciblé.', 500)
+      if (!target) return errorResponse('Compte introuvable.', 404)
+      if (target.id === callerId) return errorResponse('Vous ne pouvez pas modifier votre propre mot de passe depuis cette page.', 403)
+
+      const { error } = await ctx.supabaseAdmin.auth.admin.updateUserById(target.id, { password })
+      if (error) return errorResponse(`Impossible de définir le mot de passe : ${error.message}`, 400)
+      return Response.json({ updated: true })
     }
 
     const schoolId = typeof body.schoolId === 'string' ? body.schoolId : ''

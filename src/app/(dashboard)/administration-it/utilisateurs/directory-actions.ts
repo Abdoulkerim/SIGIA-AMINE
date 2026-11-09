@@ -17,7 +17,7 @@ function back(schoolId: string, stage: string, error?: string, flag?: string) {
 }
 async function invokeDirectory(body: Record<string, unknown>) {
   const context = await getCurrentUserContext()
-  if (!context?.roles.some(({ code }) => code === 'it_admin')) return { error: 'Seul un Administrateur informatique peut gérer les comptes.' }
+  if (!context?.roles.some(({ code }) => code === 'it_admin' || code === 'super_admin')) return { error: 'Seul un Administrateur informatique ou système peut gérer les comptes.' }
   const supabase = await createClient()
   const { error } = await supabase.functions.invoke('managed-user-directory', { body })
   if (!error) return { error: null }

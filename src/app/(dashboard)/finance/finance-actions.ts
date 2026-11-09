@@ -48,6 +48,23 @@ export async function createFeeType(formData: FormData) {
   redirect('/finance/tarifs?created=1')
 }
 
+export async function updateFeeType(formData: FormData) {
+  const id = uuid.safeParse(formData.get('feeTypeId'))
+  const parsed = feeTypeSchema.safeParse({
+    code: formData.get('code'), name: formData.get('name'), category: formData.get('category'), price: formData.get('price'),
+    description: formData.get('description') || undefined,
+  })
+  if (!id.success || !parsed.success) redirect(errUrl('/finance/tarifs', 'Vérifiez les informations du type de frais.'))
+  const { supabase } = await currentSchoolId()
+  const { error } = await (supabase as any).rpc('update_fee_type', {
+    p_fee_type_id: id.data, p_code: parsed.data.code, p_name: parsed.data.name, p_category: parsed.data.category,
+    p_description: parsed.data.description ?? null, p_default_amount: parsed.data.price, p_is_active: formData.get('isActive') === 'on',
+  })
+  if (error) redirect(errUrl('/finance/tarifs', error.message))
+  revalidatePath('/finance/tarifs'); revalidatePath('/finance/factures/nouvelle'); revalidatePath('/finance')
+  redirect('/finance/tarifs?updated=1')
+}
+
 const chargeSchema = z.object({
   studentId: uuid, feeTypeId: uuid, amount: money, dueDate: date, enrollmentId: z.string().uuid().optional(), description: z.string().trim().max(300).optional(),
 })
@@ -93,6 +110,40 @@ export async function createInvoice(formData: FormData) {
   redirect(`/finance/factures?created=${data}`)
 }
 
+export async function updateInvoice(formData: FormData) {
+  const id = uuid.safeParse(formData.get('invoiceId'))
+  const issueDate = date.safeParse(formData.get('issueDate'))
+  const dueDateValue = formData.get('dueDate')
+  const dueDate = dueDateValue ? date.safeParse(dueDateValue) : { success: true as const, data: undefined }
+  const notes = z.string().trim().max(500).optional().safeParse(formData.get('notes') || undefined)
+  if (!id.success || !issueDate.success || !dueDate.success || !notes.success) redirect(errUrl('/finance/factures', 'Vérifiez les dates et la note de la facture.'))
+  const itemIds = formData.getAll('itemId')
+  let items: Array<{ fee_type_id: string | null; description: string; quantity: number; unit_amount: number; discount: number }> | null = null
+  if (itemIds.length) {
+    const itemDescriptions = formData.getAll('itemDescription')
+    const quantities = formData.getAll('itemQuantity')
+    const prices = formData.getAll('itemUnitAmount')
+    const discounts = formData.getAll('itemDiscount')
+    const feeTypes = formData.getAll('itemFeeTypeId')
+    if ([itemDescriptions, quantities, prices, discounts, feeTypes].some((values) => values.length !== itemIds.length)) redirect(errUrl('/finance/factures', 'Les lignes de facture sont incomplètes.'))
+    const parsedItems = itemIds.map((_, index) => z.object({
+      description: z.string().trim().min(1).max(300), quantity: z.coerce.number().positive(),
+      unit_amount: z.coerce.number().nonnegative(), discount: z.coerce.number().nonnegative(),
+      fee_type_id: z.string().uuid().nullable(),
+    }).safeParse({ description: itemDescriptions[index], quantity: quantities[index], unit_amount: prices[index], discount: discounts[index], fee_type_id: feeTypes[index] || null }))
+    if (parsedItems.some((item) => !item.success)) redirect(errUrl('/finance/factures', 'Une ligne de facture contient une valeur invalide.'))
+    items = parsedItems.map((item) => item.success ? { fee_type_id: item.data.fee_type_id, description: item.data.description, quantity: item.data.quantity, unit_amount: item.data.unit_amount, discount: item.data.discount } : null).filter((item): item is NonNullable<typeof item> => item !== null)
+  }
+  const { supabase } = await currentSchoolId()
+  const { error } = await (supabase as any).rpc('update_invoice', {
+    p_invoice_id: id.data, p_issue_date: issueDate.data, p_due_date: dueDate.data ?? null,
+    p_notes: notes.data ?? null, p_items: items,
+  })
+  if (error) redirect(errUrl(`/finance/factures/${id.data}/modifier`, error.message))
+  revalidatePath('/finance/factures'); revalidatePath(`/finance/factures/${id.data}/modifier`); revalidatePath('/finance/paiements/nouveau'); revalidatePath('/finance')
+  redirect(`/finance/factures/${id.data}/modifier?updated=1`)
+}
+
 const paymentSchema = z.object({
   studentId: z.string().uuid(), parentId: z.string().uuid().optional(), amount: money, paymentDate: z.string().min(1),
   method, reference: z.string().trim().max(120).optional(), notes: z.string().trim().max(500).optional(),
@@ -119,6 +170,51 @@ export async function recordPayment(formData: FormData) {
   if (error) redirect(errUrl('/finance/paiements/nouveau', error.message))
   revalidatePath('/finance'); revalidatePath('/finance/paiements'); revalidatePath('/finance/factures'); revalidatePath('/finance/impayes')
   redirect(`/finance/paiements?created=${data}`)
+}
+
+export async function updatePaymentDetails(formData: FormData) {
+  const id = uuid.safeParse(formData.get('paymentId'))
+  const paymentDateInput = z.string().min(1).safeParse(formData.get('paymentDate'))
+  const parsedMethod = method.safeParse(formData.get('method'))
+  const reference = z.string().trim().max(120).optional().safeParse(formData.get('reference') || undefined)
+  const notes = z.string().trim().max(500).optional().safeParse(formData.get('notes') || undefined)
+  const parsedDate = paymentDateInput.success ? new Date(paymentDateInput.data) : null
+  if (!id.success || !parsedMethod.success || !reference.success || !notes.success || !parsedDate || Number.isNaN(parsedDate.getTime())) redirect(errUrl('/finance/paiements', 'Vérifiez les informations du paiement.'))
+  const { supabase } = await currentSchoolId()
+  const { error } = await (supabase as any).rpc('update_payment_details', {
+    p_payment_id: id.data, p_payment_date: parsedDate.toISOString(), p_method: parsedMethod.data,
+    p_reference: reference.data ?? null, p_notes: notes.data ?? null,
+  })
+  if (error) redirect(errUrl(`/finance/paiements/${id.data}/modifier`, error.message))
+  revalidatePath('/finance/paiements'); revalidatePath(`/finance/paiements/${id.data}/modifier`); revalidatePath(`/finance/paiements/${id.data}/recu`); revalidatePath('/finance/caisse')
+  redirect(`/finance/paiements/${id.data}/modifier?updated=1`)
+}
+
+const payrollPaymentSchema = z.object({
+  payrollItemId: uuid,
+  paymentDate: date,
+  method,
+  cashAccountId: uuid,
+  reference: z.string().trim().max(120).optional(),
+  notes: z.string().trim().max(500).optional(),
+})
+
+export async function recordPayrollPayment(formData: FormData) {
+  const parsed = payrollPaymentSchema.safeParse({
+    payrollItemId: formData.get('payrollItemId'), paymentDate: formData.get('paymentDate'),
+    method: formData.get('method'), cashAccountId: formData.get('cashAccountId'),
+    reference: formData.get('reference') || undefined, notes: formData.get('notes') || undefined,
+  })
+  if (!parsed.success) redirect(errUrl('/finance/paie', 'Informations de paiement invalides.'))
+  const { supabase } = await currentSchoolId()
+  const { error } = await (supabase as any).rpc('record_payroll_payment', {
+    p_payroll_item_id: parsed.data.payrollItemId, p_payment_date: parsed.data.paymentDate,
+    p_method: parsed.data.method, p_cash_account_id: parsed.data.cashAccountId,
+    p_reference: parsed.data.reference ?? null, p_notes: parsed.data.notes ?? null,
+  })
+  if (error) redirect(errUrl('/finance/paie', error.message))
+  revalidatePath('/finance/paie'); revalidatePath('/finance/caisse'); revalidatePath('/finance'); revalidatePath('/personnel/paie')
+  redirect('/finance/paie?paid=1')
 }
 
 const expenseSchema = z.object({

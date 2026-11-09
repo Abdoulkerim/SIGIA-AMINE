@@ -22,7 +22,7 @@ export default async function UnpaidPage({ searchParams }: { searchParams: Promi
     <main className="page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Impayés &amp; relances</h1>
+          <h1 className="page-title">Montants restant à payer &amp; relances</h1>
           <p className="page-subtitle">Créances à recouvrer, échéances et historique des relances.</p>
         </div>
       </div>
@@ -30,7 +30,7 @@ export default async function UnpaidPage({ searchParams }: { searchParams: Promi
       {q.reminded ? <p className="success">Relance enregistrée.</p> : null}
 
       <section className="card" style={{ marginBottom: 16 }}>
-        <h2>Factures impayées</h2>
+        <h2>Montant des factures restant à payer</h2>
         <div className="table-wrap">
           <table>
             <thead><tr><th>Facture</th><th>Élève</th><th>Échéance</th><th>Reste à payer</th><th>Statut</th></tr></thead>

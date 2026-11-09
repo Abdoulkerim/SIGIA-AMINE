@@ -9,7 +9,8 @@ const stages = [['maternelle','Maternelle'],['primaire','Primaire'],['secondaire
 
 export default async function NewITUserPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const context = await getCurrentUserContext()
-  if (!context?.roles.some(({ code }) => code === 'it_admin')) redirect('/dashboard')
+  const isSystemAdmin = context?.roles.some(({ code }) => code === 'super_admin') ?? false
+  if (!context?.roles.some(({ code }) => code === 'it_admin' || code === 'super_admin')) redirect('/dashboard')
   const supabase = await createClient()
   const [{ data: roles }, { data: directory, error: directoryError }, params] = await Promise.all([
     supabase.from('roles').select('id,name,code').order('name'),
@@ -17,7 +18,7 @@ export default async function NewITUserPage({ searchParams }: { searchParams: Pr
     searchParams,
   ])
   const schools = (directory?.schools ?? []).filter((school: { is_active: boolean }) => school.is_active)
-  const assignableRoles = (roles ?? []).filter((role) => !['super_admin','founder','it_admin'].includes(role.code))
+  const assignableRoles = (roles ?? []).filter((role) => isSystemAdmin || !['super_admin','founder','it_admin'].includes(role.code))
   return <main className="page">
     <div className="page-header"><div><h1 className="page-title">Créer un compte utilisateur</h1><p className="page-subtitle">Définissez l’identité, l’école, le cycle de données et le rôle.</p></div><Link className="button button-secondary" href="/administration-it/utilisateurs">Retour aux utilisateurs</Link></div>
     {params.error ? <p className="error">{params.error}</p> : null}
@@ -30,7 +31,7 @@ export default async function NewITUserPage({ searchParams }: { searchParams: Pr
       <div className="field"><label className="label" htmlFor="password">Mot de passe initial</label><InitialPasswordField/><small>Au moins 10 caractères. Transmettez-le au nouvel utilisateur par un canal sûr.</small></div>
       <div className="field"><label className="label" htmlFor="schoolId">École</label><select className="select" id="schoolId" name="schoolId" required defaultValue={schools.length === 1 ? schools[0].id : ''}><option value="" disabled>Choisir une école</option>{schools.map((school: {id:string;name:string})=><option key={school.id} value={school.id}>{school.name}</option>)}</select></div>
       <div className="field"><label className="label" htmlFor="educationStage">Cycle / périmètre des données</label><select className="select" id="educationStage" name="educationStage" required defaultValue=""><option value="" disabled>Choisir un cycle</option>{stages.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></div>
-      <div className="field"><label className="label" htmlFor="roleId">Rôle et permissions</label><select className="select" id="roleId" name="roleId" required defaultValue=""><option value="" disabled>Choisir un rôle</option>{assignableRoles.map((role)=><option key={role.id} value={role.id}>{role.name} ({role.code})</option>)}</select><small>Les rôles d’administration sont réservés.</small></div>
+      <div className="field"><label className="label" htmlFor="roleId">Rôle et permissions</label><select className="select" id="roleId" name="roleId" required defaultValue=""><option value="" disabled>Choisir un rôle</option>{assignableRoles.map((role)=><option key={role.id} value={role.id}>{role.name} ({role.code})</option>)}</select><small>{isSystemAdmin ? 'Les rôles système sont réservés à l’Administrateur système.' : 'Les rôles d’administration sont réservés.'}</small></div>
       <button className="button button-primary" style={{gridColumn:'1/-1'}} disabled={!schools.length || !assignableRoles.length}>Créer le compte et attribuer le rôle</button>
     </form></section>
   </main>

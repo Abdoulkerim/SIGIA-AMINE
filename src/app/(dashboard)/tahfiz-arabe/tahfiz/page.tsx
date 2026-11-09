@@ -26,7 +26,7 @@ export default async function TahfizPage({ searchParams }: { searchParams: Promi
   const activeLevels = (levels ?? []).filter((level: any) => level.is_active)
   const teachers = (staffJson as any[]) ?? []
   return <main className="page">
-    <div className="page-header"><div><p className="page-subtitle">Formation spécialisée</p><h1 className="page-title">Tahfiz</h1><p className="page-subtitle">Niveaux, mémorisation, révisions, récitations, évaluations et progression.</p></div><Link className="button button-secondary" href="/tahfiz-arabe">Retour Tahfiz / Arabe</Link></div>
+    <div className="page-header"><div><p className="page-subtitle">Formation spécialisée</p><h1 className="page-title">Tahfiz</h1><p className="page-subtitle">Niveaux, mémorisation, révisions, récitations, évaluations et progression.</p></div><Link className="button button-primary" href="/tahfiz-arabe/tahfiz/bulletins">Bulletins Tahfiz</Link><Link className="button button-secondary" href="/tahfiz-arabe">Retour Tahfiz / Arabe</Link></div>
     {query.error ? <p className="error">{query.error}</p> : null}
     {query.created || query.updated || query.assigned || query.session || query.published ? <p className="success">Opération enregistrée.</p> : null}
 

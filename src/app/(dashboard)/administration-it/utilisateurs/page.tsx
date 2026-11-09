@@ -11,7 +11,7 @@ const statuses = [['all','Tous les états'],['active','Actif'],['inactive','Inac
 export default async function ITUsersPage({ searchParams }: { searchParams: Promise<{ schoolId?: string; educationStage?: string; status?: string; created?: string; updated?: string; deleted?: string; error?: string }> }) {
   const params = await searchParams
   const context = await getCurrentUserContext()
-  if (!context?.roles.some(({ code }) => code === 'it_admin')) redirect('/dashboard')
+  if (!context?.roles.some(({ code }) => code === 'it_admin' || code === 'super_admin')) redirect('/dashboard')
   const selectedStage = stages.some(([value]) => value === params.educationStage) ? params.educationStage! : 'all'
   const selectedStatus = statuses.some(([value]) => value === params.status) ? params.status! : 'all'
   const supabase = await createClient()

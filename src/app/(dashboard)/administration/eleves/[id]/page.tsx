@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { updateStudent } from '../actions'
+import { updateStudent, updateStudentEnrollment } from '../actions'
 import { getStudentDossier } from '@/server/services/students/get-student-dossier'
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentUserContext } from '@/lib/auth/current-user'
 import { PhotoUpload } from '@/components/students/photo-upload'
 
 function text(value: unknown) {
@@ -27,7 +28,19 @@ export default async function StudentDossierPage({
 
   if (!dossier) notFound()
 
+  const context = await getCurrentUserContext()
   const supabase = await createClient()
+  const current = dossier.current_enrollment
+  const { data: studentExtra } = await supabase.from('students').select('blood_group').eq('id', id).eq('school_id', dossier.student.school_id).maybeSingle()
+  const { data: roleAssignments } = context?.profile.id
+    ? await supabase.from('user_roles').select('roles(role_permissions(permissions(code)))').eq('user_id', context.profile.id).eq('is_active', true)
+    : { data: [] }
+  const canManageEnrollment = context?.roles.some(({ code }) => code === 'super_admin') || (roleAssignments ?? []).some((assignment: any) =>
+    (assignment.roles?.role_permissions ?? []).some((item: any) => item.permissions?.code === 'enrollments.manage'),
+  )
+  const { data: classes } = canManageEnrollment && current.school_year_id
+    ? await supabase.from('classes').select('id,name,code').eq('school_id', dossier.student.school_id).eq('school_year_id', current.school_year_id).order('name')
+    : { data: [] }
   const { data: schoolLife } = await supabase.rpc('get_student_school_life_summary', { p_student_id: id })
   const schoolLifeData = schoolLife as any ?? { attendance: [], justifications: [], discipline: [], followups: [], rewards: [] }
   const { data: financeCharges } = await supabase.from('student_charges').select('id,amount_due,status,due_date').eq('student_id', id)
@@ -54,8 +67,6 @@ export default async function StudentDossierPage({
   const currentPhotoUrl = student.photo_url && /^https?:\/\//i.test(student.photo_url)
     ? student.photo_url
     : signedPhotoUrl
-  const current = dossier.current_enrollment
-
   return (
     <main className="page">
       <div className="page-header">
@@ -110,6 +121,7 @@ export default async function StudentDossierPage({
               <div className="field"><label className="label" htmlFor="dateOfBirth">Date de naissance</label><input className="input" id="dateOfBirth" name="dateOfBirth" type="date" defaultValue={student.date_of_birth ?? ''} /></div>
               <div className="field"><label className="label" htmlFor="placeOfBirth">Lieu de naissance</label><input className="input" id="placeOfBirth" name="placeOfBirth" defaultValue={student.place_of_birth ?? ''} maxLength={150} /></div>
               <div className="field"><label className="label" htmlFor="nationality">Nationalité</label><input className="input" id="nationality" name="nationality" defaultValue={student.nationality ?? ''} maxLength={100} /></div>
+              <div className="field"><label className="label" htmlFor="bloodGroup">Groupe sanguin</label><input className="input" id="bloodGroup" name="bloodGroup" defaultValue={studentExtra?.blood_group ?? ''} maxLength={10} /></div>
               <div className="field"><label className="label" htmlFor="residenceType">Régime</label><select className="select" id="residenceType" name="residenceType" defaultValue={student.residence_type}><option value="external">Externe</option><option value="internal">Interne</option><option value="other">Autre</option></select></div>
               <div className="field"><label className="label" htmlFor="status">Statut</label><select className="select" id="status" name="status" defaultValue={student.status}><option value="prospect">Prospect</option><option value="active">Actif</option><option value="transferred">Transféré</option><option value="graduated">Diplômé</option><option value="withdrawn">Retiré</option><option value="archived">Archivé</option></select></div>
             </div>
@@ -134,6 +146,33 @@ export default async function StudentDossierPage({
           <button className="button button-primary" type="submit">Enregistrer le dossier</button>
         </div>
       </form>
+
+      <section className="card" style={{ marginTop: 16 }}>
+        <h2>Classe actuelle et inscription</h2>
+        {canManageEnrollment && current.id && current.status !== 'completed' ? (
+          <form action={updateStudentEnrollment}>
+            <input type="hidden" name="studentId" value={student.id} />
+            <input type="hidden" name="enrollmentId" value={current.id} />
+            <div className="grid grid-3">
+              <div className="field"><label className="label" htmlFor="classId">Classe actuelle</label><select className="select" id="classId" name="classId" defaultValue={current.class_id ?? ''}><option value="">Non affecté</option>{(classes ?? []).map((item: any) => <option key={item.id} value={item.id}>{item.name}{item.code ? ` (${item.code})` : ''}</option>)}</select></div>
+              <div className="field"><label className="label" htmlFor="registrationNumber">Numéro d’inscription</label><input className="input" id="registrationNumber" name="registrationNumber" defaultValue={current.registration_number ?? ''} required maxLength={100} /></div>
+              <div className="field"><label className="label" htmlFor="enrollmentDate">Date d’inscription</label><input className="input" id="enrollmentDate" name="enrollmentDate" type="date" defaultValue={current.enrollment_date ?? ''} required /></div>
+              <div className="field"><label className="label" htmlFor="enrollmentStatus">Statut de l’inscription</label><select className="select" id="enrollmentStatus" name="enrollmentStatus" defaultValue={current.status === 'cancelled' ? 'pending' : current.status ?? 'pending'}>{current.status === 'cancelled' ? <option value="pending">Remettre en attente</option> : <><option value="pending">En attente</option><option value="approved">Approuvée</option><option value="enrolled">Inscrit</option><option value="completed">Terminée</option><option value="cancelled">Annulée</option></>}</select></div>
+              <div className="field"><label className="label" htmlFor="enrollmentResidenceType">Régime</label><select className="select" id="enrollmentResidenceType" name="enrollmentResidenceType" defaultValue={current.residence_type ?? student.residence_type}><option value="external">Externe</option><option value="internal">Interne</option><option value="other">Autre</option></select></div>
+              <div className="field"><label className="label" htmlFor="isReenrollment">Type</label><select className="select" id="isReenrollment" name="isReenrollment" defaultValue={current.is_reenrollment ? 'true' : 'false'}><option value="false">Première inscription</option><option value="true">Réinscription</option></select></div>
+              <div className="field"><label className="label" htmlFor="registrationFee">Frais d’inscription</label><input className="input" id="registrationFee" name="registrationFee" type="number" min="0" step="0.01" defaultValue={current.registration_fee ?? 0} /></div>
+              <div className="field" style={{ gridColumn: '1 / -1' }}><label className="label" htmlFor="enrollmentNotes">Notes sur l’inscription</label><textarea className="input" id="enrollmentNotes" name="enrollmentNotes" rows={3} defaultValue={current.notes ?? ''} maxLength={5000} /></div>
+            </div>
+            <div className="actions" style={{ marginTop: 16 }}><button className="button button-primary" type="submit">Enregistrer classe et inscription</button></div>
+          </form>
+        ) : current.status === 'completed' ? (
+          <p className="page-subtitle">Cette inscription est terminée et ne peut plus être modifiée.</p>
+        ) : current.id ? (
+          <p className="page-subtitle">La modification de l’inscription nécessite la permission « enrollments.manage ».</p>
+        ) : (
+          <p className="empty">Aucune inscription active à modifier. Créez ou gérez une inscription depuis la page Inscriptions.</p>
+        )}
+      </section>
 
       <section className="card" style={{ marginTop: 16 }}>
         <h2>Parents / Tuteurs</h2>

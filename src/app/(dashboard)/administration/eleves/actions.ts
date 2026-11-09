@@ -26,6 +26,7 @@ const studentUpdateSchema = z.object({
   dateOfBirth: z.string().refine((value) => !value || /^\d{4}-\d{2}-\d{2}$/.test(value)),
   placeOfBirth: z.string().trim().max(150),
   nationality: z.string().trim().max(100),
+  bloodGroup: z.string().trim().max(10),
   phone: z.string().trim().max(50),
   email: z.string().trim().max(254).refine((value) => !value || z.email().safeParse(value).success),
   address: z.string().trim().max(500),
@@ -35,6 +36,19 @@ const studentUpdateSchema = z.object({
   emergencyRelationship: z.string().trim().max(100),
   emergencyPhone: z.string().trim().max(50),
   medicalNotes: z.string().trim().max(5000),
+})
+
+const studentEnrollmentUpdateSchema = z.object({
+  studentId: z.string().uuid(),
+  enrollmentId: z.string().uuid(),
+  classId: z.string().uuid().or(z.literal('')),
+  registrationNumber: z.string().trim().min(1).max(100),
+  enrollmentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  enrollmentStatus: z.enum(['pending', 'approved', 'enrolled', 'completed', 'cancelled']),
+  enrollmentResidenceType: z.enum(['internal', 'external', 'other']),
+  isReenrollment: z.enum(['true', 'false']),
+  registrationFee: z.coerce.number().min(0).max(999999999),
+  enrollmentNotes: z.string().trim().max(5000),
 })
 
 const PHOTO_BUCKET = 'student-photos'
@@ -133,6 +147,7 @@ export async function updateStudent(formData: FormData) {
       date_of_birth: parsed.data.dateOfBirth || null,
       place_of_birth: parsed.data.placeOfBirth || null,
       nationality: parsed.data.nationality || null,
+      blood_group: parsed.data.bloodGroup || null,
       phone: parsed.data.phone || null,
       email: parsed.data.email || null,
       address: parsed.data.address || null,
@@ -158,6 +173,72 @@ export async function updateStudent(formData: FormData) {
 
   revalidatePath('/administration/eleves')
   revalidatePath(`/administration/eleves/${parsed.data.studentId}`)
+  redirect(`/administration/eleves/${parsed.data.studentId}?saved=1`)
+}
+
+export async function updateStudentEnrollment(formData: FormData) {
+  const context = await getCurrentUserContext()
+  const schoolId = context?.profile.school_id
+  const parsed = studentEnrollmentUpdateSchema.safeParse(Object.fromEntries(formData))
+  const studentId = String(formData.get('studentId') ?? '')
+
+  if (!schoolId) redirect('/login')
+  if (!parsed.success) {
+    redirect(`/administration/eleves/${encodeURIComponent(studentId)}?error=${encodeURIComponent('Vérifie les champs de l’inscription.')}`)
+  }
+
+  const supabase = await createClient()
+  const { data: enrollment } = await supabase
+    .from('enrollments')
+    .select('id,school_year_id')
+    .eq('id', parsed.data.enrollmentId)
+    .eq('student_id', parsed.data.studentId)
+    .eq('school_id', schoolId)
+    .maybeSingle()
+
+  if (!enrollment) {
+    redirect(`/administration/eleves/${encodeURIComponent(parsed.data.studentId)}?error=${encodeURIComponent('Inscription introuvable ou accès non autorisé.')}`)
+  }
+
+  if (parsed.data.classId) {
+    const { data: selectedClass } = await supabase
+      .from('classes')
+      .select('id')
+      .eq('id', parsed.data.classId)
+      .eq('school_id', schoolId)
+      .eq('school_year_id', enrollment.school_year_id)
+      .maybeSingle()
+
+    if (!selectedClass) {
+      redirect(`/administration/eleves/${encodeURIComponent(parsed.data.studentId)}?error=${encodeURIComponent('La classe choisie doit appartenir à la même année scolaire.')}`)
+    }
+  }
+
+  const { error } = await supabase
+    .from('enrollments')
+    .update({
+      class_id: parsed.data.classId || null,
+      registration_number: parsed.data.registrationNumber,
+      enrollment_date: parsed.data.enrollmentDate,
+      status: parsed.data.enrollmentStatus,
+      residence_type: parsed.data.enrollmentResidenceType,
+      is_reenrollment: parsed.data.isReenrollment === 'true',
+      registration_fee: parsed.data.registrationFee,
+      notes: parsed.data.enrollmentNotes || null,
+    })
+    .eq('id', parsed.data.enrollmentId)
+    .eq('student_id', parsed.data.studentId)
+    .eq('school_id', schoolId)
+    .select('id')
+    .single()
+
+  if (error) {
+    redirect(`/administration/eleves/${encodeURIComponent(parsed.data.studentId)}?error=${encodeURIComponent(error.message)}`)
+  }
+
+  revalidatePath('/administration/eleves')
+  revalidatePath(`/administration/eleves/${parsed.data.studentId}`)
+  revalidatePath('/administration/inscriptions')
   redirect(`/administration/eleves/${parsed.data.studentId}?saved=1`)
 }
 

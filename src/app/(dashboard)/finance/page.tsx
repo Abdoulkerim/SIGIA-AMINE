@@ -15,6 +15,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
         <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
           <Link className="button button-primary" href="/finance/factures/nouvelle">Nouvelle facture</Link>
           <Link className="button button-secondary" href="/finance/paiements/nouveau">Enregistrer un paiement</Link>
+          <Link className="button button-secondary" href="/finance/paie">Payer les employés</Link>
         </div>
       </div>
       {error ? <p className="error">{error.message}</p> : null}
@@ -26,7 +27,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
         <article className="card"><div className="stat-label">Dépenses du jour</div><div className="stat-value">{money(d.expenses_today)}</div></article>
       </section>
       <section className="grid grid-3" style={{marginBottom:16}}>
-        <article className="card"><div className="stat-label">Factures impayées</div><div className="stat-value">{Number(d.unpaid_invoices ?? 0)}</div><p className="page-subtitle"><Link href="/finance/impayes">Voir les impayés →</Link></p></article>
+        <article className="card"><div className="stat-label">Nombre de factures restant à payer</div><div className="stat-value">{Number(d.unpaid_invoices ?? 0)}</div><p className="page-subtitle"><Link href="/finance/impayes">Voir les montants restant à payer →</Link></p></article>
         <article className="card"><div className="stat-label">Factures en retard</div><div className="stat-value">{Number(d.overdue_invoices ?? 0)}</div><p className="page-subtitle"><Link href="/finance/factures">Voir les factures →</Link></p></article>
         <article className="card"><div className="stat-label">Comptes de caisse actifs</div><div className="stat-value">{Array.isArray(d.cash_accounts) ? d.cash_accounts.length : 0}</div><p className="page-subtitle"><Link href="/finance/caisse">Ouvrir la caisse →</Link></p></article>
       </section>
@@ -38,6 +39,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
         <Link className="card" href="/finance/tarifs"><strong>Tarification</strong><p className="page-subtitle">Types de frais et grilles.</p></Link>
         <Link className="card" href="/finance/factures"><strong>Facturation</strong><p className="page-subtitle">Factures et échéances.</p></Link>
         <Link className="card" href="/finance/paiements"><strong>Paiements & reçus</strong><p className="page-subtitle">Encaissements et traçabilité.</p></Link>
+        <Link className="card" href="/finance/paie"><strong>Paie des employés</strong><p className="page-subtitle">Régler les bulletins validés et suivre les sorties.</p></Link>
         <Link className="card" href="/finance/depenses"><strong>Dépenses</strong><p className="page-subtitle">Dépenses, validation et caisse.</p></Link>
       </section>
     </main>

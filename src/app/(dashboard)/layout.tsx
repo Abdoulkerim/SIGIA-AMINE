@@ -12,7 +12,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
 
   const schoolId = context.profile.school_id
   const role = context.roles.find((r) => r.schoolId === schoolId) ?? context.roles[0]
-  const canAccessIT = context.roles.some(({ code }) => code === 'it_admin')
+  const canAccessIT = context.roles.some(({ code }) => code === 'it_admin' || code === 'super_admin')
   const supabase = await createClient()
   const { data: roleAssignments } = await supabase
     .from('user_roles')

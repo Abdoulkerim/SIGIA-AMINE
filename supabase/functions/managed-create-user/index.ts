@@ -1,7 +1,7 @@
 import { withSupabase } from 'npm:@supabase/server@1'
 
 const allowedStages = new Set(['maternelle', 'primaire', 'secondaire', 'formation', 'autre', 'parent'])
-const allowedCreators = new Set(['it_admin'])
+const allowedCreators = new Set(['it_admin', 'super_admin'])
 const protectedRoles = new Set(['super_admin', 'founder', 'it_admin'])
 
 function jsonError(message: string, status: number) {
@@ -50,7 +50,8 @@ export default {
       .from('user_roles').select('roles(code)').eq('user_id', userId).eq('is_active', true)
     if (assignmentsError) return jsonError('Impossible de vÃ©rifier les droits administrateur.', 500)
     const creatorRoles = (assignments ?? []).map((assignment: any) => assignment.roles?.code as string | undefined)
-    if (!creatorRoles.some((code) => allowedCreators.has(code ?? ''))) return jsonError('Seul un Administrateur informatique peut créer des comptes.', 403)
+    const isSystemAdmin = creatorRoles.includes('super_admin')
+    if (!creatorRoles.some((code) => allowedCreators.has(code ?? ''))) return jsonError('Seul un Administrateur informatique ou système peut créer des comptes.', 403)
 
     const { data: school, error: schoolError } = await ctx.supabaseAdmin.from('schools').select('id,is_active').eq('id', schoolId).maybeSingle()
     if (schoolError) return jsonError('Impossible de vérifier l’école sélectionnée.', 500)
@@ -60,7 +61,7 @@ export default {
       .from('roles').select('id,code').eq('id', roleId).maybeSingle()
     if (roleError) return jsonError('Impossible de vÃ©rifier le rÃ´le sÃ©lectionnÃ©.', 500)
     if (!role) return jsonError('Le rÃ´le sÃ©lectionnÃ© est introuvable.', 400)
-    if (protectedRoles.has(role.code)) {
+    if (protectedRoles.has(role.code) && !isSystemAdmin) {
       return jsonError('Seul un super administrateur ou le fondateur peut attribuer ce rÃ´le.', 403)
     }
 

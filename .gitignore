@@ -13,3 +13,10 @@ Thumbs.db
 supabase/functions/.env
 .vercel/
 
+
+# Sauvegardes locales de bases de donnees
+_audit_backup/
+*.dump
+*.backup
+*.sql.gz
+*.tar.gz

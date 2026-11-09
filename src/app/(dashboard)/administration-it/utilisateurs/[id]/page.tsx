@@ -6,7 +6,7 @@ import { setTemporaryPassword } from './actions'
 
 export default async function ManageUserAccountPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; updated?: string }> }) {
   const [context, { id }, query] = await Promise.all([getCurrentUserContext(), params, searchParams])
-  if (!context?.roles.some(({ code }) => code === 'it_admin')) redirect('/dashboard')
+  if (!context?.roles.some(({ code }) => code === 'it_admin' || code === 'super_admin')) redirect('/dashboard')
   const supabase = await createClient()
   const { data: user } = await supabase.from('users').select('id,first_name,last_name,username,email').eq('id', id).maybeSingle()
   if (!user) notFound()

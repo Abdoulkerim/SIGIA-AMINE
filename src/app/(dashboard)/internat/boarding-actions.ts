@@ -95,6 +95,25 @@ export async function createBed(formData: FormData) {
   redirect('/internat/structures?created=bed')
 }
 
+const structureEditSchema = z.object({ entity: z.enum(['building','dormitory','room','bed']), id: uuid, values: z.string().min(2) })
+
+export async function updateBoardingStructure(formData: FormData) {
+  const entity = formData.get('entity')
+  const rawValues = entity === 'building' ? { code: formData.get('code'), name: formData.get('name'), description: formData.get('description') }
+    : entity === 'dormitory' ? { buildingId: formData.get('buildingId'), name: formData.get('name'), gender: formData.get('gender') }
+    : entity === 'room' ? { dormitoryId: formData.get('dormitoryId'), name: formData.get('name'), capacity: formData.get('capacity'), floor: formData.get('floor'), status: formData.get('status') }
+    : { roomId: formData.get('roomId'), bedNumber: formData.get('bedNumber'), status: formData.get('status') }
+  const parsed = structureEditSchema.safeParse({ entity, id: formData.get('id'), values: JSON.stringify(rawValues) })
+  if (!parsed.success) redirect(errUrl('/internat/structures', 'Modification invalide.'))
+  let values: Record<string, unknown>
+  try { values = JSON.parse(parsed.data.values) } catch { redirect(errUrl('/internat/structures', 'Données de modification invalides.')) }
+  const { supabase } = await currentSchool()
+  const { error } = await supabase.rpc('update_boarding_structure', { p_entity: parsed.data.entity, p_id: parsed.data.id, p_values: values })
+  if (error) redirect(errUrl('/internat/structures', error.message))
+  revalidatePath('/internat'); revalidatePath('/internat/structures'); revalidatePath('/internat/affectations')
+  redirect('/internat/structures?updated=1')
+}
+
 const assignmentSchema = z.object({
   studentId: uuid, bedId: uuid, startDate: date, endDate: date.optional(), notes: z.string().trim().max(500).optional(),
 })

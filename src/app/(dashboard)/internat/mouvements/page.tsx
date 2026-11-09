@@ -7,18 +7,20 @@ export default async function MouvementsPage({ searchParams }: { searchParams: P
   const supabase=await createClient(); const claims=await supabase.auth.getClaims(); const userId=claims.data?.claims?.sub
   const { data: profile }=userId ? await supabase.from('users').select('school_id').eq('id',userId).single() : {data:null}
   const schoolId=profile?.school_id
-  const [{data: students},{data: movements}] = schoolId ? await Promise.all([
-    supabase.from('boarding_assignments').select('student_id,students(student_number,first_name,last_name)').eq('school_id',schoolId).eq('status','active').order('start_date',{ascending:false}),
+  const [{data: assignments},{data: movements}] = schoolId ? await Promise.all([
+    supabase.from('boarding_assignments').select('student_id').eq('school_id',schoolId).eq('status','active').order('start_date',{ascending:false}),
     supabase.from('boarding_movements').select('id,movement_type,movement_at,authorization,destination,reason,students(student_number,first_name,last_name)').eq('school_id',schoolId).order('movement_at',{ascending:false}).limit(100),
   ]) : [{data:[]},{data:[]}]
-  const uniqueStudents=Array.from(new Map((students??[]).map((x:any)=>[x.student_id,x.students])).entries()).map(([id,s])=>({id,...(s as object)}))
+  const studentIds=Array.from(new Set((assignments??[]).map((x:any)=>x.student_id)))
+  const {data: enrolledStudents}=studentIds.length ? await supabase.from('students').select('id,student_number,first_name,last_name').in('id',studentIds).order('last_name') : {data:[]}
+  const uniqueStudents=enrolledStudents??[]
   return <main className="page">
     <div className="page-header"><div><h1 className="page-title">Sorties et retours</h1><p className="page-subtitle">Entrées, sorties temporaires, retours et autorisations.</p></div><Link className="button button-secondary" href="/internat">Retour</Link></div>
     {sp.error && <div className="error">{sp.error}</div>}{sp.created && <div className="success">Mouvement enregistré.</div>}
     <form className="card" action={recordBoardingMovement}>
       <h2 style={{ marginTop:0 }}>Enregistrer un mouvement</h2>
       <div className="grid grid-4">
-        <div className="field"><label className="label">Élève</label><select className="select" name="studentId" required>{uniqueStudents.map((s:any)=><option key={s.id} value={s.id}>{s.student_number} — {s.first_name} {s.last_name}</option>)}</select></div>
+        <div className="field"><label className="label">Élève</label><select className="select" name="studentId" required defaultValue=""><option value="" disabled>{uniqueStudents.length ? 'Choisir un élève' : 'Aucun élève interne actif'}</option>{uniqueStudents.map((s:any)=><option key={s.id} value={s.id}>{s.student_number} — {s.first_name} {s.last_name}</option>)}</select></div>
         <div className="field"><label className="label">Type</label><select className="select" name="movementType" required><option value="entry">Entrée</option><option value="temporary_leave">Sortie temporaire</option><option value="exit">Sortie</option><option value="return">Retour</option></select></div>
         <div className="field"><label className="label">Date / heure</label><input className="input" type="datetime-local" name="movementAt" required /></div>
         <div className="field"><label className="label">Autorisation</label><input className="input" name="authorization" /></div>

@@ -137,16 +137,24 @@ export async function assignStudentArabic(formData: FormData) {
   const studentId = uuid.safeParse(formData.get('studentId'))
   const levelId = z.string().uuid().optional().safeParse(formData.get('levelId') || undefined)
   const teacherId = z.string().uuid().optional().safeParse(formData.get('teacherId') || undefined)
-  const startDate = z.string().optional().safeParse(formData.get('startDate') || undefined)
+  const startDate = date.optional().safeParse(formData.get('startDate') || undefined)
   const status = z.enum(['active','paused','completed','inactive']).safeParse(formData.get('status') || 'active')
   const notes = z.string().trim().max(1200).optional().safeParse(formData.get('notes') || undefined)
-  if (![studentId, levelId, teacherId, startDate, status, notes].every((x) => x.success)) fail('/tahfiz-arabe/arabe', 'Profil Arabe invalide.')
+  const arabicFullName = z.string().trim().min(1).max(200).safeParse(formData.get('arabicFullName'))
+  const firstName = z.string().trim().min(1).max(120).optional().safeParse(formData.get('firstName') || undefined)
+  const lastName = z.string().trim().min(1).max(120).optional().safeParse(formData.get('lastName') || undefined)
+  if (![studentId, levelId, teacherId, startDate, status, notes, arabicFullName, firstName, lastName].every((x) => x.success)) fail('/tahfiz-arabe/arabe', 'Profil Arabe invalide.')
   const supabase = await createClient()
-  const { data: current } = await supabase.from('student_arabic').select('current_progress').eq('student_id', studentId.data).maybeSingle()
-  const { error } = await supabase.rpc('assign_student_arabic', { p_student_id: studentId.data, p_arabic_level_id: levelId.data ?? null, p_teacher_id: teacherId.data ?? null, p_start_date: startDate.data || null, p_progress: current?.current_progress ?? 0, p_status: status.data, p_notes: notes.data ?? null })
+  const { error } = await (supabase as any).rpc('save_student_arabic_profile', {
+    p_student_id: studentId.data, p_arabic_level_id: levelId.data ?? null, p_teacher_id: teacherId.data ?? null,
+    p_start_date: startDate.data ?? null, p_status: status.data, p_notes: notes.data ?? null,
+    p_arabic_full_name: (formData.get('arabicFullName') as string | null)?.trim() || null,
+    p_first_name: firstName.data ?? null, p_last_name: lastName.data ?? null,
+  })
   if (error) fail('/tahfiz-arabe/arabe', error.message)
   revalidatePath('/tahfiz-arabe/arabe')
   revalidatePath('/tahfiz-arabe')
+  revalidatePath('/administration/eleves')
   redirect('/tahfiz-arabe/arabe?assigned=1')
 }
 

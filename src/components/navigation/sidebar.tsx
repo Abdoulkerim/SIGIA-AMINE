@@ -89,9 +89,10 @@ const groups: NavGroup[] = [
       { label: 'Tarifs', href: '/finance/tarifs', icon: Receipt },
       { label: 'Factures', href: '/finance/factures', icon: FileText },
       { label: 'Paiements', href: '/finance/paiements', icon: Wallet },
+      { label: 'Paie employés', href: '/finance/paie', icon: Wallet },
       { label: 'Dépenses', href: '/finance/depenses', icon: Receipt },
       { label: 'Caisse', href: '/finance/caisse', icon: Building2 },
-      { label: 'Impayés', href: '/finance/impayes', icon: ClipboardList },
+      { label: 'Montants restant à payer', href: '/finance/impayes', icon: ClipboardList },
     ],
   },
   {
@@ -264,6 +265,7 @@ const routePermissions: Array<{ prefix: string; anyOf: string[] }> = [
   { prefix: '/finance/tarifs', anyOf: ['finance.manage'] },
   { prefix: '/finance/factures', anyOf: ['finance.view', 'finance.manage'] },
   { prefix: '/finance/paiements', anyOf: ['finance.view', 'finance.manage'] },
+  { prefix: '/finance/paie', anyOf: ['payroll.manage', 'payroll.view'] },
   { prefix: '/finance/depenses', anyOf: ['expenses.manage'] },
   { prefix: '/finance/caisse', anyOf: ['cash.manage'] },
   { prefix: '/finance/impayes', anyOf: ['finance.view', 'finance.manage'] },
@@ -304,7 +306,7 @@ const routePermissions: Array<{ prefix: string; anyOf: string[] }> = [
   { prefix: '/administration-it/parametres', anyOf: ['settings.manage'] },
   { prefix: '/administration-it/roles', anyOf: ['users.roles.manage'] },
   { prefix: '/administration-it/acces', anyOf: ['users.roles.manage'] },
-  { prefix: '/administration-it/cartes', anyOf: ['students.view', 'hr.manage'] },
+  { prefix: '/administration-it/cartes', anyOf: ['students.view', 'students.manage', 'hr.view', 'hr.manage'] },
   { prefix: '/administration-it/systeme', anyOf: ['settings.manage', 'audit.view'] },
   { prefix: '/administration-it', anyOf: ['users.manage', 'users.roles.manage', 'audit.view', 'settings.manage'] },
 ]

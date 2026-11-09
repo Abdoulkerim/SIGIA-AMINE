@@ -41,9 +41,6 @@ $$;
 -- Employee dossiers are school-wide master data, not cycle-bound student data.
 -- Keep access governed by the existing school/HR/teacher policies instead.
 drop trigger if exists trg_apply_education_stage on public.employees;
-update public.employees
-set education_stage = null
-where education_stage is not null;
 
 drop policy if exists education_stage_boundary on public.employees;
 

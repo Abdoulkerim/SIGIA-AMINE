@@ -36,9 +36,14 @@ export async function createManagedUser(formData: FormData) {
   }
 
   const context = await getCurrentUserContext()
-  if (!context?.roles.some(({ code }) => code === 'it_admin')) redirect(formUrl('Seul un Administrateur informatique peut créer des comptes.'))
-
+  const isSystemAdmin = context?.roles.some(({ code }) => code === 'super_admin') ?? false
+  if (!context?.roles.some(({ code }) => code === 'it_admin' || code === 'super_admin')) redirect(formUrl('Seul un Administrateur informatique ou système peut créer des comptes.'))
   const supabase = await createClient()
+  const { data: selectedRole } = await supabase.from('roles').select('code').eq('id', parsed.data.roleId).maybeSingle()
+  if (!selectedRole || (!isSystemAdmin && ['super_admin', 'founder', 'it_admin'].includes(selectedRole.code))) {
+    redirect(formUrl(isSystemAdmin ? 'Le rôle choisi est introuvable.' : 'Seul un Administrateur système peut attribuer un rôle d’administration.'))
+  }
+
   const { error } = await supabase.functions.invoke('managed-create-user', { body: parsed.data })
   if (error) {
     let message = 'La fonction Supabase de création de comptes est indisponible. Déployez managed-create-user puis réessayez.'

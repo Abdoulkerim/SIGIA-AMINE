@@ -25,3 +25,9 @@ Thumbs.db
 # Fichiers temporaires et sauvegardes locales
 *.tmp
 *.bak
+# Sauvegardes de bases de donnees
+_audit_backup/
+*.dump
+*.backup
+*.sql.gz
+*.tar.gz
