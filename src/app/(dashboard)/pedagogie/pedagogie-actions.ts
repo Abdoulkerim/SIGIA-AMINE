@@ -4,9 +4,11 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentUserContext } from '@/lib/auth/current-user'
 
 const uuid = z.string().uuid()
 const day = z.coerce.number().int().min(1).max(7)
+const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 
 function errUrl(base: string, error: string) {
   return `${base}?error=${encodeURIComponent(error)}`
@@ -121,12 +123,17 @@ export async function createAssessment(formData: FormData) {
   })
   if (!parsed.success) redirect(errUrl('/pedagogie/evaluations/nouveau', 'Données d’évaluation invalides.'))
   const supabase = await createClient()
+  const context = await getCurrentUserContext()
+  const linkedTeacher = context?.profile.id
+    ? await supabase.from('employees').select('id,teacher_profiles!inner(employee_id)')
+      .eq('user_id', context.profile.id).eq('status', 'active').maybeSingle()
+    : { data: null }
   const { data, error } = await supabase.rpc('create_assessment', {
     p_school_year_id: parsed.data.schoolYearId,
     p_period_id: parsed.data.periodId,
     p_class_id: parsed.data.classId,
     p_subject_id: parsed.data.subjectId,
-    p_teacher_id: parsed.data.teacherId,
+    p_teacher_id: linkedTeacher.data?.id ?? parsed.data.teacherId,
     p_assessment_type_id: parsed.data.assessmentTypeId ?? null,
     p_title: parsed.data.title,
     p_assessment_date: parsed.data.date,
@@ -136,6 +143,66 @@ export async function createAssessment(formData: FormData) {
   revalidatePath('/pedagogie/evaluations')
   revalidatePath('/pedagogie')
   redirect(`/pedagogie/evaluations/${data}/notes?created=1`)
+}
+
+const academicPeriodSchema = z.object({
+  schoolYearId: uuid,
+  name: z.string().trim().min(1).max(100),
+  code: z.string().trim().min(1).max(30).transform(value => value.toUpperCase()),
+  startDate: dateString,
+  endDate: dateString,
+  sequenceNo: z.preprocess(value => value === '' || value == null ? undefined : value, z.coerce.number().int().positive().optional()),
+}).refine(value => value.endDate >= value.startDate, {
+  path: ['endDate'],
+  message: 'La date de fin doit être postérieure ou égale à la date de début.',
+})
+
+export async function createAcademicPeriod(formData: FormData) {
+  const parsed = academicPeriodSchema.safeParse({
+    schoolYearId: formData.get('schoolYearId'),
+    name: formData.get('name'),
+    code: formData.get('code'),
+    startDate: formData.get('startDate'),
+    endDate: formData.get('endDate'),
+    sequenceNo: formData.get('sequenceNo'),
+  })
+  if (!parsed.success) redirect(errUrl('/pedagogie/evaluations/nouveau', parsed.error.issues[0]?.message ?? 'Période invalide.'))
+
+  const context = await getCurrentUserContext()
+  const schoolId = context?.profile.school_id
+  if (!schoolId) redirect('/login')
+
+  const supabase = await createClient()
+  const { data: year, error: yearError } = await supabase.from('school_years')
+    .select('id,start_date,end_date').eq('id', parsed.data.schoolYearId).eq('school_id', schoolId).maybeSingle()
+  if (yearError || !year) redirect(errUrl('/pedagogie/evaluations/nouveau', 'Année scolaire introuvable.'))
+  if (parsed.data.startDate < year.start_date || parsed.data.endDate > year.end_date) {
+    redirect(errUrl('/pedagogie/evaluations/nouveau', 'Les dates de la période doivent être comprises dans l’année scolaire.'))
+  }
+
+  const { data: overlap, error: overlapError } = await supabase.from('academic_periods')
+    .select('id').eq('school_year_id', year.id)
+    .lte('start_date', parsed.data.endDate).gte('end_date', parsed.data.startDate).limit(1).maybeSingle()
+  if (overlapError) redirect(errUrl('/pedagogie/evaluations/nouveau', overlapError.message))
+  if (overlap) redirect(errUrl('/pedagogie/evaluations/nouveau', 'Les dates chevauchent une période déjà créée.'))
+
+  const { data: lastPeriod, error: lastPeriodError } = await supabase.from('academic_periods')
+    .select('sequence_no').eq('school_year_id', year.id).order('sequence_no', { ascending: false }).limit(1).maybeSingle()
+  if (lastPeriodError) redirect(errUrl('/pedagogie/evaluations/nouveau', lastPeriodError.message))
+
+  const { error } = await supabase.from('academic_periods').insert({
+    school_year_id: year.id,
+    name: parsed.data.name,
+    code: parsed.data.code,
+    start_date: parsed.data.startDate,
+    end_date: parsed.data.endDate,
+    sequence_no: parsed.data.sequenceNo ?? (lastPeriod?.sequence_no ?? 0) + 1,
+  })
+  if (error) redirect(errUrl('/pedagogie/evaluations/nouveau', error.message))
+
+  revalidatePath('/pedagogie/evaluations/nouveau')
+  revalidatePath('/pedagogie/bulletins')
+  redirect('/pedagogie/evaluations/nouveau?periodCreated=1')
 }
 
 export async function publishAssessment(formData: FormData) {
@@ -184,29 +251,48 @@ export async function saveAssessmentGradesFromForm(formData: FormData) {
 }
 
 const bulletinSchema = z.object({
-  studentId: uuid,
+  studentIds: z.array(uuid).min(1).max(500),
   schoolYearId: uuid,
   periodId: uuid,
+  classId: uuid,
 })
 
-export async function generateReportCard(formData: FormData) {
+export async function generateReportCards(formData: FormData) {
   const parsed = bulletinSchema.safeParse({
-    studentId: formData.get('studentId'),
+    studentIds: formData.getAll('studentIds'),
     schoolYearId: formData.get('schoolYearId'),
     periodId: formData.get('periodId'),
+    classId: formData.get('classId'),
   })
   if (!parsed.success) redirect(errUrl('/pedagogie/bulletins', 'Paramètres de bulletin invalides.'))
   const supabase = await createClient()
-  const { data, error } = await supabase.rpc('generate_report_card_draft', {
-    p_student_id: parsed.data.studentId,
-    p_school_year_id: parsed.data.schoolYearId,
-    p_period_id: parsed.data.periodId,
-  })
-  if (error) redirect(errUrl('/pedagogie/bulletins', error.message))
-  revalidatePath('/pedagogie/bulletins')
-  redirect(`/pedagogie/bulletins/${data}?generated=1`)
-}
+  const context = await getCurrentUserContext()
+  const schoolId = context?.profile.school_id
+  if (!schoolId) redirect(errUrl('/pedagogie/bulletins', 'Contexte scolaire introuvable.'))
+  const studentIds = [...new Set(parsed.data.studentIds)]
+  const { data: enrollments, error: enrollmentError } = await supabase.from('enrollments').select('student_id').eq('school_id', schoolId).eq('school_year_id', parsed.data.schoolYearId).eq('class_id', parsed.data.classId).eq('status', 'enrolled').in('student_id', studentIds)
+  if (enrollmentError) redirect(errUrl('/pedagogie/bulletins', enrollmentError.message))
+  const eligible = new Set((enrollments ?? []).map((row) => row.student_id))
+  if (eligible.size !== studentIds.length) redirect(errUrl('/pedagogie/bulletins', 'La sélection contient un élève qui n’est pas inscrit dans cette classe pour cette année.'))
 
+  let generated = 0
+  let failed = 0
+  let firstError = ''
+  for (const studentId of studentIds) {
+    const { error } = await supabase.rpc('generate_report_card_draft', {
+      p_student_id: studentId,
+      p_school_year_id: parsed.data.schoolYearId,
+      p_period_id: parsed.data.periodId,
+    })
+    if (error) {
+      failed += 1
+      firstError ||= error.message
+    } else generated += 1
+  }
+  if (!generated) redirect(errUrl('/pedagogie/bulletins', firstError === 'NO_PUBLISHED_GRADES' ? 'Aucune note publiée pour les élèves sélectionnés et cette période. Publiez les notes des évaluations avant de générer les bulletins.' : firstError || 'Aucun bulletin n’a pu être généré.'))
+  revalidatePath('/pedagogie/bulletins')
+  redirect(`/pedagogie/bulletins?generated=${generated}&failed=${failed}`)
+}
 export async function publishReportCard(formData: FormData) {
   const id = uuid.safeParse(formData.get('id'))
   if (!id.success) redirect('/pedagogie/bulletins?error=Bulletin invalide')
