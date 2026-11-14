@@ -19,11 +19,11 @@ export default async function NewPaymentPage({ searchParams }: { searchParams: P
   ])
   const schoolYearId = years?.find((year) => year.is_current)?.id ?? years?.[0]?.id
   let classes: Array<{ id: string; name: string; code: string | null }> = []
-  let enrollments: Array<{ student_id: string; class_id: string }> = []
+  let enrollments: Array<{ student_id: string; class_id: string | null; education_stage: string | null }> = []
   if (schoolYearId) {
     const [classResult, enrollmentResult] = await Promise.all([
       supabase.from('classes').select('id,name,code').eq('school_id', schoolId).eq('school_year_id', schoolYearId).order('name'),
-      supabase.from('enrollments').select('student_id,class_id').eq('school_id', schoolId).eq('school_year_id', schoolYearId).eq('status', 'enrolled'),
+      supabase.from('enrollments').select('student_id,class_id,education_stage').eq('school_id', schoolId).eq('school_year_id', schoolYearId).eq('status', 'enrolled'),
     ])
     classes = classResult.data ?? []
     enrollments = enrollmentResult.data ?? []

@@ -1,17 +1,24 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { assignBoarding, closeBoarding } from '../boarding-actions'
+import { StudentFilterSelect } from '@/components/students/student-filter-select'
 
 export default async function AffectationsPage({ searchParams }: { searchParams: Promise<Record<string,string|undefined>> }) {
   const sp = await searchParams
   const supabase = await createClient(); const claims = await supabase.auth.getClaims(); const userId=claims.data?.claims?.sub
   const { data: profile } = userId ? await supabase.from('users').select('school_id').eq('id',userId).single() : { data: null }
   const schoolId=profile?.school_id
-  const [{ data: students }, { data: beds }, { data: assignments }] = schoolId ? await Promise.all([
+  const [{ data: students }, { data: beds }, { data: assignments }, { data: years }] = schoolId ? await Promise.all([
     supabase.from('students').select('id,student_number,first_name,last_name,residence_type,status,gender').eq('school_id',schoolId).eq('status','active').eq('residence_type','internal').order('last_name'),
     supabase.from('boarding_beds').select('id,bed_number,status,boarding_rooms(name,boarding_dormitories(name,boarding_buildings(name,code)))').order('bed_number'),
     supabase.from('boarding_assignments').select('id,start_date,end_date,status,notes,student_id,bed_id,students(student_number,first_name,last_name),boarding_beds(bed_number,boarding_rooms(name,boarding_dormitories(name,boarding_buildings(name,code))))').eq('school_id',schoolId).order('start_date',{ascending:false}).limit(100),
-  ]) : [{data:[]},{data:[]},{data:[]}]
+    supabase.from('school_years').select('id,is_current,start_date').eq('school_id',schoolId).order('start_date',{ascending:false}),
+  ]) : [{data:[]},{data:[]},{data:[]},{data:[]}]
+  const schoolYearId = years?.find((year:any) => year.is_current)?.id ?? years?.[0]?.id
+  const [{ data: classes }, { data: enrollments }] = schoolId && schoolYearId ? await Promise.all([
+    supabase.from('classes').select('id,name,code').eq('school_id',schoolId).eq('school_year_id',schoolYearId).order('name'),
+    supabase.from('enrollments').select('student_id,class_id,education_stage').eq('school_id',schoolId).eq('school_year_id',schoolYearId).eq('status','enrolled'),
+  ]) : [{data:[]},{data:[]}]
   const availableBeds=(beds??[]).filter((b:any)=>b.status==='available')
   return <main className="page">
     <div className="page-header"><div><h1 className="page-title">Affectations internat</h1><p className="page-subtitle">Un élève interne = une affectation active et un lit disponible.</p></div><Link className="button button-secondary" href="/internat">Retour</Link></div>
@@ -19,7 +26,7 @@ export default async function AffectationsPage({ searchParams }: { searchParams:
     <form className="card" action={assignBoarding}>
       <h2 style={{ marginTop: 0 }}>Nouvelle affectation</h2>
       <div className="grid grid-4">
-        <div className="field"><label className="label">Élève interne</label><select className="select" name="studentId" required>{(students??[]).map((s:any)=><option key={s.id} value={s.id}>{s.student_number} — {s.first_name} {s.last_name}</option>)}</select></div>
+        <StudentFilterSelect students={(students ?? []) as any[]} classes={(classes ?? []) as any[]} enrollments={(enrollments ?? []) as any[]} label="Élève interne" includeGender />
         <div className="field"><label className="label">Lit disponible</label><select className="select" name="bedId" required>{availableBeds.map((b:any)=><option key={b.id} value={b.id}>{b.bed_number} — {b.boarding_rooms?.name} / {b.boarding_rooms?.boarding_dormitories?.name}</option>)}</select></div>
         <div className="field"><label className="label">Date de début</label><input className="input" type="date" name="startDate" required /></div>
         <div className="field"><label className="label">Notes</label><input className="input" name="notes" /></div>

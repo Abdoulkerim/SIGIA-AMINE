@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
 import { createTahfizLevel, updateTahfizLevel, assignStudentTahfiz, recordTahfizSession, publishTahfizSession } from '../tahfiz-arabe-actions'
 import { ProgressBar } from '@/components/administration/progress-bar'
+import { StudentFilterSelect } from '@/components/students/student-filter-select'
+import { getCurrentClassFilters } from '@/lib/students/current-class-filters'
 
 const statusLabels: Record<string,string> = { active:'Actif', paused:'Suspendu', completed:'Terminé', inactive:'Inactif' }
 const attendanceLabels: Record<string,string> = { present:'Présent', absent:'Absent', late:'Retard', excused:'Excusé' }
@@ -15,6 +17,7 @@ export default async function TahfizPage({ searchParams }: { searchParams: Promi
   if (!context?.profile.school_id) return null
   const supabase = await createClient()
   const schoolId = context.profile.school_id
+  const { classes, enrollments } = await getCurrentClassFilters(supabase, schoolId)
   const [{ data: levels }, { data: students }, { data: staffJson }, { data: surahs }, { data: profiles }, { data: sessions }] = await Promise.all([
     supabase.from('tahfiz_levels').select('id,code,name,sequence_no,is_active,description').eq('school_id', schoolId).order('sequence_no').order('name'),
     supabase.from('students').select('id,student_number,first_name,last_name').eq('school_id', schoolId).order('last_name').order('first_name').limit(500),
@@ -42,7 +45,7 @@ export default async function TahfizPage({ searchParams }: { searchParams: Promi
     </section>
 
     <section className="card" style={{marginTop:16}}><h2>Affecter / mettre à jour un élève</h2><p className="page-subtitle">La progression est calculée à partir des versets distincts enregistrés en nouvelle mémorisation, sur les 6 236 versets du Coran.</p><form action={assignStudentTahfiz} className="grid grid-3">
-      <div className="field"><label className="label">Élève</label><select className="select" name="studentId" required><option value="">Choisir</option>{students?.map((s:any)=><option key={s.id} value={s.id}>{s.student_number} — {s.last_name} {s.first_name}</option>)}</select></div>
+      <StudentFilterSelect students={(students ?? []) as any[]} classes={classes} enrollments={enrollments} />
       <div className="field"><label className="label">Niveau</label><select className="select" name="levelId"><option value="">Non défini</option>{activeLevels.map((l:any)=><option key={l.id} value={l.id}>{l.code} — {l.name}</option>)}</select></div>
       <div className="field"><label className="label">Responsable</label><select className="select" name="teacherId"><option value="">Non défini</option>{teachers?.map((t:any)=><option key={t.id} value={t.id}>{t.last_name} {t.first_name} — {text(t.job_title)}</option>)}</select></div>
       <div className="field"><label className="label">Début</label><input className="input" name="startDate" type="date" /></div>
@@ -55,7 +58,7 @@ export default async function TahfizPage({ searchParams }: { searchParams: Promi
     <section className="card" style={{marginTop:16}}><h2>Profils Tahfiz</h2>{profiles?.length ? <div className="table-wrap"><table><thead><tr><th>Élève</th><th>Niveau</th><th>Responsable</th><th>Progression</th><th>Statut</th></tr></thead><tbody>{profiles.map((p:any)=><tr key={p.id}><td>{p.students?.last_name} {p.students?.first_name}</td><td>{text(p.tahfiz_levels?.name)}</td><td>{text(p.employees ? `${p.employees.last_name} ${p.employees.first_name}` : null)}</td><td><ProgressBar value={p.current_progress} /></td><td><span className="badge">{statusLabels[p.status] || p.status}</span></td></tr>)}</tbody></table></div> : <p className="empty">Aucun profil Tahfiz.</p>}</section>
 
     <section className="card" style={{marginTop:16}}><h2>Enregistrer une séance</h2><form action={recordTahfizSession} className="grid grid-3">
-      <div className="field"><label className="label">Élève</label><select className="select" name="studentId" required><option value="">Choisir</option>{profiles?.map((p:any)=><option key={p.student_id} value={p.student_id}>{p.students?.last_name} {p.students?.first_name}</option>)}</select></div>
+      <StudentFilterSelect students={(students ?? []).filter((student:any) => (profiles ?? []).some((profile:any) => profile.student_id === student.id)) as any[]} classes={classes} enrollments={enrollments} />
       <div className="field"><label className="label">Date</label><input className="input" name="sessionDate" type="date" required /></div>
       <div className="field"><label className="label">Type</label><select className="select" name="sessionType" required>{Object.entries(sessionLabels).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></div>
       <div className="field"><label className="label">Sourate</label><select className="select" name="surahId"><option value="">Aucune</option>{surahs?.map((s:any)=><option key={s.id} value={s.id}>{s.surah_number}. {s.name_fr} — {s.name_ar}</option>)}</select></div>

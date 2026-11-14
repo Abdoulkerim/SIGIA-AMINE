@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 
 type Student = { id: string; student_number: string; first_name: string; last_name: string }
 type SchoolClass = { id: string; name: string; code: string | null }
-type Enrollment = { student_id: string; class_id: string }
+type Enrollment = { student_id: string; class_id: string | null; education_stage?: string | null }
 type Invoice = { id: string; invoice_number: string; student_id: string; total: number | string; status: string; due_date: string | null }
 
 export function PaymentTargetFields({ students, classes, enrollments, invoices }: {
@@ -14,14 +14,18 @@ export function PaymentTargetFields({ students, classes, enrollments, invoices }
   invoices: Invoice[]
 }) {
   const [classId, setClassId] = useState('')
+  const [stage, setStage] = useState('')
   const [studentId, setStudentId] = useState('')
   const [targetId, setTargetId] = useState('')
 
   const studentsInClass = useMemo(() => {
-    if (!classId) return students
-    const enrolledIds = new Set(enrollments.filter((row) => row.class_id === classId).map((row) => row.student_id))
-    return students.filter((student) => enrolledIds.has(student.id))
-  }, [classId, enrollments, students])
+    return students.filter((student) => {
+      const rows = enrollments.filter((row) => row.student_id === student.id)
+      return (!classId || rows.some((row) => row.class_id === classId)) && (!stage || rows.some((row) => row.education_stage === stage))
+    })
+  }, [classId, stage, enrollments, students])
+  const stages = [...new Set(enrollments.map((row) => row.education_stage).filter((value): value is string => Boolean(value)))].sort()
+  const visibleClasses = classes.filter((item) => !stage || enrollments.some((row) => row.class_id === item.id && row.education_stage === stage))
 
   const studentInvoices = useMemo(() => invoices.filter((invoice) => invoice.student_id === studentId), [invoices, studentId])
 
@@ -32,10 +36,16 @@ export function PaymentTargetFields({ students, classes, enrollments, invoices }
 
   return <>
     <div className="field">
+      <label className="label" htmlFor="paymentStage">Cycle</label>
+      <select className="select" id="paymentStage" value={stage} onChange={(event) => { setStage(event.target.value); setClassId(''); selectStudent('') }}>
+        <option value="">Tous les cycles</option>{stages.map((value) => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}
+      </select>
+    </div>
+    <div className="field">
       <label className="label" htmlFor="paymentClassId">Classe (filtre)</label>
       <select className="select" id="paymentClassId" value={classId} onChange={(event) => { setClassId(event.target.value); selectStudent('') }}>
         <option value="">Toutes les classes</option>
-        {classes.map((item) => <option key={item.id} value={item.id}>{item.name}{item.code ? ` (${item.code})` : ''}</option>)}
+        {visibleClasses.map((item) => <option key={item.id} value={item.id}>{item.name}{item.code ? ` (${item.code})` : ''}</option>)}
       </select>
     </div>
     <div className="field">

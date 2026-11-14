@@ -29,6 +29,7 @@ export function AssessmentFields({
   teacherProfile: Teacher | null
 }) {
   const [schoolYearId, setSchoolYearId] = useState(initialYearId)
+  const [periodId, setPeriodId] = useState('')
   const [classId, setClassId] = useState('')
   const [subjectId, setSubjectId] = useState('')
   const [teacherId, setTeacherId] = useState(teacherProfile?.id ?? '')
@@ -55,31 +56,33 @@ export function AssessmentFields({
     <label className="field">
       <span className="label">Année scolaire</span>
       <select
-        className="select"
+        className="select assessment-select"
         name="schoolYearId"
         value={schoolYearId}
         onChange={event => {
           setSchoolYearId(event.target.value)
+          setPeriodId('')
           setClassId('')
           setSubjectId('')
           if (!teacherProfile) setTeacherId('')
         }}
         required
       >
+        {!years.length ? <option value="">Aucune année scolaire disponible</option> : null}
         {years.map(year => <option key={year.id} value={year.id}>{year.name}</option>)}
       </select>
     </label>
     <label className="field">
       <span className="label">Période</span>
-      <select className="select" name="periodId" key={schoolYearId} defaultValue="" required>
-        <option value="">Sélectionner</option>
+      <select className="select assessment-select" name="periodId" value={periodId} onChange={event => setPeriodId(event.target.value)} required disabled={!schoolYearId || !openPeriods.length}>
+        <option value="">{openPeriods.length ? 'Choisir une période' : 'Aucune période ouverte pour cette année'}</option>
         {openPeriods.map(period => <option key={period.id} value={period.id}>{period.name}</option>)}
       </select>
     </label>
     <label className="field">
       <span className="label">Classe</span>
       <select
-        className="select"
+        className="select assessment-select"
         name="classId"
         value={classId}
         onChange={event => {
@@ -88,7 +91,7 @@ export function AssessmentFields({
         }}
         required
       >
-        <option value="">Sélectionner</option>
+        <option value="">{availableClasses.length ? 'Choisir une classe' : teacherProfile ? 'Aucune classe affectée pour cette année' : 'Aucune classe disponible pour cette année'}</option>
         {availableClasses.map(item => <option key={item.id} value={item.id}>{item.name} ({item.code})</option>)}
       </select>
       {teacherProfile && !availableClasses.length ? <span className="field-hint">Aucune classe ne vous est affectée pour cette année.</span> : null}

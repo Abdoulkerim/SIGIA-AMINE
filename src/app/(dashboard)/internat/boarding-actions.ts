@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import type { Json } from '@/types/database.types'
 
 const uuid = z.string().uuid()
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -105,7 +106,7 @@ export async function updateBoardingStructure(formData: FormData) {
     : { roomId: formData.get('roomId'), bedNumber: formData.get('bedNumber'), status: formData.get('status') }
   const parsed = structureEditSchema.safeParse({ entity, id: formData.get('id'), values: JSON.stringify(rawValues) })
   if (!parsed.success) redirect(errUrl('/internat/structures', 'Modification invalide.'))
-  let values: Record<string, unknown>
+  let values: Json
   try { values = JSON.parse(parsed.data.values) } catch { redirect(errUrl('/internat/structures', 'Données de modification invalides.')) }
   const { supabase } = await currentSchool()
   const { error } = await supabase.rpc('update_boarding_structure', { p_entity: parsed.data.entity, p_id: parsed.data.id, p_values: values })
