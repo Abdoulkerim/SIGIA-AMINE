@@ -10,7 +10,7 @@ type Subject = { id: string; name: string; code: string }
 type EligibleAssignment = { school_year_id: string; class_id: string; subject_id: string }
 
 export default function TeacherAssignmentForm({
-  years, teachers, teachersError, classes, subjects, eligibleAssignments, selectedTeacherId, action,
+  years, teachers, teachersError, classes, subjects, eligibleAssignments, selectedTeacherId, action, initialAssignment,
 }: {
   years: Year[]
   teachers: Teacher[]
@@ -20,19 +20,20 @@ export default function TeacherAssignmentForm({
   eligibleAssignments: EligibleAssignment[]
   selectedTeacherId: string
   action: (formData: FormData) => void | Promise<void>
+  initialAssignment?: { id: string; schoolYearId: string; teacherId: string; classId: string; subjectId: string; weeklyHours: number | null; isPrimary: boolean }
 }) {
   const currentEligibleYears = new Set(eligibleAssignments.map((assignment) => assignment.school_year_id))
   const availableYears = years.filter((year) => currentEligibleYears.has(year.id))
   const initialYearId = availableYears.find((year) => year.is_current)?.id ?? availableYears[0]?.id ?? ''
-  const [yearId, setYearId] = useState(initialYearId)
+  const [yearId, setYearId] = useState(initialAssignment?.schoolYearId ?? initialYearId)
   const availableClasses = useMemo(() => classes.filter((item) =>
     item.school_year_id === yearId && eligibleAssignments.some((assignment) => assignment.school_year_id === yearId && assignment.class_id === item.id),
   ), [classes, eligibleAssignments, yearId])
-  const [classId, setClassId] = useState(availableClasses[0]?.id ?? '')
+  const [classId, setClassId] = useState(initialAssignment?.classId ?? availableClasses[0]?.id ?? '')
   const availableSubjects = subjects.filter((subject) => eligibleAssignments.some((assignment) =>
     assignment.school_year_id === yearId && assignment.class_id === classId && assignment.subject_id === subject.id,
   ))
-  const [subjectId, setSubjectId] = useState(availableSubjects[0]?.id ?? '')
+  const [subjectId, setSubjectId] = useState(initialAssignment?.subjectId ?? availableSubjects[0]?.id ?? '')
 
   function changeYear(nextYearId: string) {
     setYearId(nextYearId)
@@ -56,6 +57,7 @@ export default function TeacherAssignmentForm({
 
   return (
     <form action={action} className="grid grid-2">
+      {initialAssignment ? <input type="hidden" name="assignmentId" value={initialAssignment.id} /> : null}
       <div className="field">
         <label className="label" htmlFor="schoolYearId">Année scolaire *</label>
         <select className="select" id="schoolYearId" name="schoolYearId" value={yearId} onChange={(event) => changeYear(event.target.value)} required>
@@ -80,18 +82,20 @@ export default function TeacherAssignmentForm({
       <div className="field">
         <label className="label" htmlFor="subjectId">Matière *</label>
         <select className="select" id="subjectId" name="subjectId" value={availableSubjects.some((subject) => subject.id === subjectId) ? subjectId : availableSubjects[0]?.id ?? ''} onChange={(event) => setSubjectId(event.target.value)} required>
+          {!availableSubjects.length ? <option value="" disabled>Aucune matière rattachée à cette classe</option> : null}
           {availableSubjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name} — {subject.code}</option>)}
         </select>
+        {!availableSubjects.length ? <p className="field-hint">Rattachez une matière active à cette classe pour l’année sélectionnée.</p> : null}
       </div>
       <div className="field">
         <label className="label" htmlFor="weeklyHours">Volume hebdomadaire</label>
-        <input className="input" id="weeklyHours" name="weeklyHours" type="number" min="0.25" step="0.25" />
+        <input className="input" id="weeklyHours" name="weeklyHours" type="number" min="0.25" step="0.25" defaultValue={initialAssignment?.weeklyHours ?? ''} />
       </div>
       <div className="field">
         <label className="label" htmlFor="isPrimary">Enseignant principal ?</label>
-        <select className="select" id="isPrimary" name="isPrimary" defaultValue="false"><option value="false">Non</option><option value="true">Oui</option></select>
+        <select className="select" id="isPrimary" name="isPrimary" defaultValue={initialAssignment?.isPrimary ? 'true' : 'false'}><option value="false">Non</option><option value="true">Oui</option></select>
       </div>
-      <div><button className="button button-primary" type="submit" disabled={!teachers.length || !availableClasses.length || !availableSubjects.length}>Enregistrer l’affectation</button></div>
+      <div><button className="button button-primary" type="submit" disabled={!teachers.length || !availableClasses.length || !availableSubjects.length}>{initialAssignment ? 'Enregistrer les modifications' : 'Enregistrer l’affectation'}</button></div>
     </form>
   )
 }

@@ -72,7 +72,7 @@ export default async function StudentDossierPage({
       <div className="page-header">
         <div>
           <p className="page-subtitle">Dossier administratif numérique</p>
-          <h1 className="page-title">{student.first_name} {student.last_name}</h1>
+          <h1 className="page-title student-name">{student.first_name} {student.last_name}</h1>
           <p className="page-subtitle">
             Matricule : <strong>{student.student_number}</strong>
           </p>

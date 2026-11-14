@@ -176,18 +176,51 @@ export async function assignTeacher(formData: FormData) {
   redirect(`/pedagogie/affectations?created=${data}`)
 }
 
-export async function toggleTeacherAssignment(formData: FormData) {
+export async function updateTeacherAssignment(formData: FormData) {
+  const assignmentId = z.string().uuid().safeParse(formData.get('assignmentId'))
+  const parsed = assignmentSchema.safeParse({
+    schoolYearId: formData.get('schoolYearId'),
+    teacherId: formData.get('teacherId'),
+    classId: formData.get('classId'),
+    subjectId: formData.get('subjectId'),
+    weeklyHours: formData.get('weeklyHours') || undefined,
+    isPrimary: formData.get('isPrimary') || 'false',
+  })
+  if (!assignmentId.success || !parsed.success) redirect('/pedagogie/affectations?error=Affectation invalide')
+
+  const supabase = await createClient()
+  const { data: current, error: currentError } = await supabase.from('teacher_assignments')
+    .select('teacher_id').eq('id', assignmentId.data).maybeSingle()
+  if (currentError || !current) redirect(errUrl('/pedagogie/affectations', currentError?.message ?? 'Affectation introuvable.'))
+
+  const { data: updated, error } = await supabase.from('teacher_assignments').update({
+    school_year_id: parsed.data.schoolYearId,
+    teacher_id: parsed.data.teacherId,
+    class_id: parsed.data.classId,
+    subject_id: parsed.data.subjectId,
+    weekly_hours: parsed.data.weeklyHours ?? null,
+    is_primary: parsed.data.isPrimary,
+  }).eq('id', assignmentId.data).select('teacher_id').maybeSingle()
+  if (error) redirect(errUrl(`/pedagogie/affectations/${assignmentId.data}/modifier`, error.message))
+  if (!updated) redirect(errUrl(`/pedagogie/affectations/${assignmentId.data}/modifier`, 'Modification refusée ou affectation introuvable.'))
+
+  revalidatePath('/pedagogie/affectations')
+  revalidatePath(`/personnel/enseignants/${current.teacher_id}`)
+  revalidatePath(`/personnel/enseignants/${updated.teacher_id}`)
+  redirect('/pedagogie/affectations?updated=1')
+}
+
+export async function deleteTeacherAssignment(formData: FormData) {
   const id = z.string().uuid().safeParse(formData.get('id'))
-  const active = z.coerce.boolean().safeParse(formData.get('active'))
-  if (!id.success || !active.success) redirect('/pedagogie/affectations?error=Paramètres invalides')
+  if (!id.success) redirect('/pedagogie/affectations?error=Paramètres invalides')
 
   const supabase = await createClient()
   const { error } = await supabase.rpc('set_teacher_assignment_active', {
     p_assignment_id: id.data,
-    p_is_active: active.data,
+    p_is_active: false,
   })
   if (error) redirect(errUrl('/pedagogie/affectations', error.message))
 
   revalidatePath('/pedagogie/affectations')
-  redirect('/pedagogie/affectations?updated=1')
+  redirect('/pedagogie/affectations?deleted=1')
 }

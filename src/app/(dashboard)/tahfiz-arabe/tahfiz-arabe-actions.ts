@@ -161,7 +161,7 @@ export async function assignStudentArabic(formData: FormData) {
 export async function recordArabicSession(formData: FormData) {
   const studentId = uuid.safeParse(formData.get('studentId'))
   const sessionDate = date.safeParse(formData.get('sessionDate'))
-  const activityType = z.string().trim().min(1).max(100).safeParse(formData.get('activityType'))
+  const activityType = z.string().trim().min(1).max(120).safeParse(formData.get('activityType'))
   const topic = z.string().trim().max(300).optional().safeParse(formData.get('topic') || undefined)
   const score = num.min(0).optional().safeParse(formData.get('score') || undefined)
   const teacherId = z.string().uuid().optional().safeParse(formData.get('teacherId') || undefined)

@@ -82,7 +82,7 @@ export default async function EnrollmentDetailPage({
         <div className="card">
           <h2>Élève</h2>
           <p><strong>Matricule :</strong> {student?.student_number ?? '—'}</p>
-          <p><strong>Nom :</strong> {student ? `${student.last_name} ${student.first_name}` : '—'}</p>
+          <p><strong>Nom :</strong> <span className="student-name">{student ? `${student.last_name} ${student.first_name}` : '—'}</span></p>
           <p><strong>Statut élève :</strong> {student?.status ?? '—'}</p>
           <p><strong>Régime :</strong> {enrollment.residence_type}</p>
         </div>

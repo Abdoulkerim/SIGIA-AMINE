@@ -78,7 +78,7 @@ export default async function EnrollmentsPage({
         </section>
       ) : (
         <>
-        <ReportActions title="Liste des inscriptions" fileName="liste-inscriptions" headers={['Référence', 'Matricule', 'Élève', 'Année scolaire', 'Niveau', 'Classe', 'Régime', 'Type', 'Statut']} rows={rows.map((row: any) => [row.registration_number, row.students?.student_number, row.students ? `${row.students.last_name} ${row.students.first_name}` : '—', row.school_years?.name, row.levels?.name ?? 'À définir', row.classes?.name ?? 'À affecter', row.residence_type, row.is_reenrollment ? 'Réinscription' : 'Inscription', labels[row.status] ?? row.status])} />
+        <ReportActions title="Liste des inscriptions" fileName="liste-inscriptions" headers={['Référence', 'Matricule', 'Élève', 'Année scolaire', 'Niveau', 'Classe', 'Régime', 'Type', 'Statut']} rows={rows.map((row: any) => [row.registration_number, row.students?.student_number, row.students ? `${row.students.last_name} ${row.students.first_name}`.toLocaleUpperCase('fr-FR') : '—', row.school_years?.name, row.levels?.name ?? 'À définir', row.classes?.name ?? 'À affecter', row.residence_type, row.is_reenrollment ? 'Réinscription' : 'Inscription', labels[row.status] ?? row.status])} />
         <section className="table-wrap">
           <table>
             <thead><tr><th>Référence</th><th>Élève</th><th>Année</th><th>Niveau</th><th>Classe</th><th>Régime</th><th>Type</th><th>Statut</th><th></th></tr></thead>
@@ -86,7 +86,7 @@ export default async function EnrollmentsPage({
               {rows.map((row: any) => (
                 <tr key={row.id}>
                   <td>{row.registration_number}</td>
-                  <td>{row.students ? `${row.students.last_name} ${row.students.first_name}` : '—'}</td>
+                  <td className="student-name">{row.students ? `${row.students.last_name} ${row.students.first_name}` : '—'}</td>
                   <td>{row.school_years?.name ?? '—'}</td>
                   <td>{row.levels?.name ?? 'À définir'}</td>
                   <td>{row.classes?.name ?? 'À affecter'}</td>

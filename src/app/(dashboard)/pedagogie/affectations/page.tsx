@@ -1,12 +1,12 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
-import { toggleTeacherAssignment } from '../../personnel/teacher-actions'
+import { DeleteTeacherAssignmentForm } from './delete-teacher-assignment-form'
 
 export default async function AssignmentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; created?: string; updated?: string }>
+  searchParams: Promise<{ error?: string; created?: string; updated?: string; deleted?: string }>
 }) {
   const context = await getCurrentUserContext()
   if (!context?.profile.school_id) return null
@@ -31,6 +31,7 @@ export default async function AssignmentsPage({
 
       {params.created ? <p className="success">Affectation enregistrée.</p> : null}
       {params.updated ? <p className="success">Affectation modifiée.</p> : null}
+      {params.deleted ? <p className="success">Affectation supprimée.</p> : null}
       {params.error ? <p className="error">{params.error}</p> : null}
       {error ? <p className="error">{error.message}</p> : null}
 
@@ -47,12 +48,9 @@ export default async function AssignmentsPage({
                   <td>{a.subjects?.name ?? '—'}</td>
                   <td>{a.weekly_hours ?? '—'}</td>
                   <td>{a.is_primary ? 'Oui' : 'Non'}</td>
-                  <td>
-                    <form action={toggleTeacherAssignment}>
-                      <input type="hidden" name="id" value={a.id} />
-                      <input type="hidden" name="active" value="false" />
-                      <button className="button button-secondary" type="submit">Retirer</button>
-                    </form>
+                  <td style={{ display: 'flex', gap: 8 }}>
+                    <Link className="button button-secondary" href={`/pedagogie/affectations/${a.id}/modifier`}>Modifier</Link>
+                    <DeleteTeacherAssignmentForm id={a.id} label={`${a.employees?.last_name ?? ''} ${a.employees?.first_name ?? ''} · ${a.classes?.name ?? ''} · ${a.subjects?.name ?? ''}`} />
                   </td>
                 </tr>
               ))}

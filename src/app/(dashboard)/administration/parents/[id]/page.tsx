@@ -55,7 +55,7 @@ export default async function ParentDetailPage({ params }: { params: Promise<{ i
                   {relations.map((relation: any) => (
                     <tr key={relation.students?.id}>
                       <td>{relation.students?.student_number ?? '—'}</td>
-                      <td>{relation.students?.last_name} {relation.students?.first_name}</td>
+                      <td className="student-name">{relation.students?.last_name} {relation.students?.first_name}</td>
                       <td>{relation.relationship}</td>
                       <td>{relation.is_primary ? 'Oui' : 'Non'}</td>
                     </tr>

@@ -84,7 +84,7 @@ export default async function NewEnrollmentPage({
               <label className="label" htmlFor="studentId">Élève *</label>
               <select className="select" id="studentId" name="studentId" required>
                 <option value="">Choisir un élève</option>
-                {(studentsResult.data ?? []).map((s: any) => <option key={s.id} value={s.id}>{s.student_number} — {s.last_name} {s.first_name}</option>)}
+                {(studentsResult.data ?? []).map((s: any) => <option key={s.id} value={s.id}>{s.student_number} — {`${s.last_name} ${s.first_name}`.toLocaleUpperCase('fr-FR')}</option>)}
               </select>
             </div>
             <div className="field">

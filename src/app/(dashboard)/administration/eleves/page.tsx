@@ -48,7 +48,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
           <div className="field" style={{ alignSelf: 'end' }}><button className="button button-secondary" type="submit">Afficher</button></div>
         </form>
       </section>
-      <ReportActions title={`Liste des élèves${params.classId ? ` — ${(classes ?? []).find((item: any) => item.id === params.classId)?.name ?? ''}` : ''}`} fileName="liste-eleves" headers={['Matricule', 'Nom', 'Prénom', 'Classe', 'Genre', 'Naissance', 'Régime', 'Statut']} rows={shownStudents.map((student) => [student.student_number, student.last_name, student.first_name, classByStudent.get(student.id) ?? 'Non inscrit', genderLabel(student.gender), student.date_of_birth, student.residence_type, student.status])} />
+      <ReportActions title={`Liste des élèves${params.classId ? ` — ${(classes ?? []).find((item: any) => item.id === params.classId)?.name ?? ''}` : ''}`} fileName="liste-eleves" headers={['Matricule', 'Nom', 'Prénom', 'Classe', 'Genre', 'Naissance', 'Régime', 'Statut']} rows={shownStudents.map((student) => [student.student_number, student.last_name.toLocaleUpperCase('fr-FR'), student.first_name.toLocaleUpperCase('fr-FR'), classByStudent.get(student.id) ?? 'Non inscrit', genderLabel(student.gender), student.date_of_birth, student.residence_type, student.status])} />
 
       {!shownStudents.length ? (
         <section className="card empty">
@@ -76,8 +76,8 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
               {shownStudents.map((student) => (
                 <tr key={student.id}>
                   <td>{student.student_number}</td>
-                  <td>{student.last_name}</td>
-                  <td>{student.first_name}</td>
+                  <td className="student-name">{student.last_name}</td>
+                  <td className="student-name">{student.first_name}</td>
                   <td>{classByStudent.get(student.id) ?? '—'}</td>
                   <td>{genderLabel(student.gender)}</td>
                   <td>{student.date_of_birth ?? '—'}</td>

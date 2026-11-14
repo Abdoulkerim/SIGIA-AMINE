@@ -145,6 +145,71 @@ export async function createAssessment(formData: FormData) {
   redirect(`/pedagogie/evaluations/${data}/notes?created=1`)
 }
 
+const updateAssessmentSchema = assessmentSchema.extend({ id: uuid })
+
+export async function updateAssessment(formData: FormData) {
+  const typeRaw = formData.get('assessmentTypeId')
+  const parsed = updateAssessmentSchema.safeParse({
+    id: formData.get('id'),
+    schoolYearId: formData.get('schoolYearId'),
+    periodId: formData.get('periodId'),
+    classId: formData.get('classId'),
+    subjectId: formData.get('subjectId'),
+    teacherId: formData.get('teacherId'),
+    assessmentTypeId: typeRaw ? typeRaw : undefined,
+    title: formData.get('title'),
+    date: formData.get('date'),
+    maxScore: formData.get('maxScore'),
+  })
+  if (!parsed.success) redirect(errUrl('/pedagogie/evaluations', 'Données de modification invalides.'))
+
+  const context = await getCurrentUserContext()
+  const schoolId = context?.profile.school_id
+  if (!schoolId) redirect('/login')
+  const supabase = await createClient()
+  const { data: current, error: currentError } = await supabase.from('assessments')
+    .select('id,is_published,period_id').eq('id', parsed.data.id).eq('school_id', schoolId).maybeSingle()
+  if (currentError || !current) redirect(errUrl('/pedagogie/evaluations', currentError?.message ?? 'Évaluation introuvable.'))
+  if (current.is_published) redirect(errUrl(`/pedagogie/evaluations/${parsed.data.id}/modifier`, 'Dépubliez l’évaluation avant de modifier ses informations.'))
+  const { data: period } = await supabase.from('academic_periods').select('is_closed').eq('id', parsed.data.periodId).maybeSingle()
+  if (period?.is_closed) redirect(errUrl(`/pedagogie/evaluations/${parsed.data.id}/modifier`, 'La période choisie est clôturée.'))
+
+  const { data, error } = await supabase.from('assessments').update({
+    school_year_id: parsed.data.schoolYearId,
+    period_id: parsed.data.periodId,
+    class_id: parsed.data.classId,
+    subject_id: parsed.data.subjectId,
+    teacher_id: parsed.data.teacherId,
+    assessment_type_id: parsed.data.assessmentTypeId ?? null,
+    title: parsed.data.title,
+    assessment_date: parsed.data.date,
+    max_score: parsed.data.maxScore,
+  }).eq('id', parsed.data.id).eq('school_id', schoolId).select('id').maybeSingle()
+  if (error) redirect(errUrl(`/pedagogie/evaluations/${parsed.data.id}/modifier`, error.message))
+  if (!data) redirect(errUrl(`/pedagogie/evaluations/${parsed.data.id}/modifier`, 'Modification refusée ou évaluation introuvable.'))
+
+  revalidatePath('/pedagogie/evaluations')
+  revalidatePath(`/pedagogie/evaluations/${parsed.data.id}/notes`)
+  revalidatePath('/pedagogie/bulletins')
+  redirect('/pedagogie/evaluations?updated=1')
+}
+
+export async function deleteAssessment(formData: FormData) {
+  const id = uuid.safeParse(formData.get('id'))
+  if (!id.success) redirect('/pedagogie/evaluations?error=Évaluation invalide.')
+  const context = await getCurrentUserContext()
+  const schoolId = context?.profile.school_id
+  if (!schoolId) redirect('/login')
+  const supabase = await createClient()
+  const { data, error } = await supabase.from('assessments').delete().eq('id', id.data).eq('school_id', schoolId).select('id').maybeSingle()
+  if (error) redirect(errUrl('/pedagogie/evaluations', error.message))
+  if (!data) redirect(errUrl('/pedagogie/evaluations', 'Suppression refusée ou évaluation introuvable.'))
+  revalidatePath('/pedagogie/evaluations')
+  revalidatePath(`/pedagogie/evaluations/${id.data}/notes`)
+  revalidatePath('/pedagogie/bulletins')
+  redirect('/pedagogie/evaluations?deleted=1')
+}
+
 const academicPeriodSchema = z.object({
   schoolYearId: uuid,
   name: z.string().trim().min(1).max(100),

@@ -18,21 +18,26 @@ export default async function ArabicPage({ searchParams }: { searchParams: Promi
   if (!context?.profile.school_id) return null
   const supabase = await createClient()
   const schoolId = context.profile.school_id
-  const [{ data: levels }, { data: students }, { data: staffJson }, { data: periodsJson }, { data: profiles }, { data: sessions }, { data: evaluations }] = await Promise.all([
+  const [{ data: levels }, { data: students }, { data: staffJson }, { data: periodsJson }, { data: profiles, error: profilesError }, { data: sessions }, { data: evaluations }, { data: arabicSubjects, error: arabicSubjectsError }] = await Promise.all([
     supabase.from('arabic_levels').select('id,code,name,sequence_no,is_active,description').eq('school_id',schoolId).order('sequence_no').order('name'),
-    supabase.from('students').select('id,student_number,first_name,last_name').eq('school_id',schoolId).order('last_name').order('first_name').limit(500),
+    supabase.from('students').select('id,student_number,first_name,last_name').eq('school_id',schoolId).order('last_name').order('first_name'),
     supabase.rpc('get_specialized_staff', { p_module: 'arabic' }),
     supabase.rpc('get_specialized_periods'),
-    (supabase as any).from('student_arabic').select('id,student_id,arabic_level_id,assigned_teacher_id,start_date,current_progress,status,notes,arabic_full_name,students(first_name,last_name,student_number),arabic_levels(name),employees(first_name,last_name)').eq('school_id',schoolId).order('updated_at',{ascending:false}).limit(100),
+    (supabase as any).from('student_arabic').select('id,student_id,arabic_level_id,assigned_teacher_id,start_date,current_progress,status,notes,arabic_full_name,arabic_levels(name),employees(first_name,last_name)').eq('school_id',schoolId).order('updated_at',{ascending:false}),
     supabase.from('arabic_sessions').select('id,student_id,session_date,activity_type,topic,score,observation,teacher_id,attendance_status,is_published,students(first_name,last_name),employees(first_name,last_name)').eq('school_id',schoolId).order('session_date',{ascending:false}).limit(30),
     supabase.from('arabic_evaluations').select('id,student_id,period_id,evaluation_date,title,skill_area,score,observation,evaluator_id,is_published,published_at,students(first_name,last_name),academic_periods(name)').eq('school_id',schoolId).order('evaluation_date',{ascending:false}).limit(30),
+    supabase.from('subjects').select('id,name,code').eq('school_id',schoolId).eq('domain','arabe').eq('is_active',true).order('name'),
   ])
   const activeLevels = (levels ?? []).filter((level: any) => level.is_active)
+  const studentById = new Map((students ?? []).map((student: any) => [student.id, student]))
+  const arabicProfiles = (profiles ?? []).map((profile: any) => ({ ...profile, students: studentById.get(profile.student_id) ?? null }))
   const teachers = (staffJson as any[]) ?? []
   const periods = (periodsJson as any[]) ?? []
   return <main className="page">
     <div className="page-header"><div><p className="page-subtitle">Formation spécialisée</p><h1 className="page-title">Arabe</h1><p className="page-subtitle">Niveaux, parcours, séances, présence, évaluations et progression. Les domaines précis restent configurables.</p></div><Link className="button button-primary" href="/tahfiz-arabe/arabe/bulletins">Bulletins Arabe</Link><Link className="button button-secondary" href="/tahfiz-arabe">Retour Tahfiz / Arabe</Link></div>
     {query.error ? <p className="error">{query.error}</p> : null}
+    {profilesError ? <p className="error">Impossible de charger les élèves Arabe : {profilesError.message}</p> : null}
+    {arabicSubjectsError ? <p className="error">Impossible de charger les matières du domaine Arabe : {arabicSubjectsError.message}</p> : null}
     {query.created || query.updated || query.assigned || query.session || query.evaluation || query.published ? <p className="success">Opération enregistrée.</p> : null}
 
     <section className="grid grid-2">
@@ -57,8 +62,8 @@ export default async function ArabicPage({ searchParams }: { searchParams: Promi
       <button className="button button-primary" type="submit">Enregistrer le profil</button>
     </form></section>
 
-        <section className="card" style={{marginTop:16}}><h2>Profils Arabe</h2>{profiles?.length ? <div className="table-wrap"><table><thead><tr><th>Élève (français)</th><th>Nom écrit en arabe</th><th>Niveau</th><th>Responsable</th><th>Progression</th><th>Statut</th><th>Modification</th></tr></thead><tbody>{profiles.map((p:any)=><tr key={p.id}>
-      <td>{p.students?.last_name} {p.students?.first_name}</td><td dir="rtl" lang="ar">{text(p.arabic_full_name)}</td><td>{text(p.arabic_levels?.name)}</td><td>{text(p.employees ? `${p.employees.last_name} ${p.employees.first_name}` : null)}</td><td><ProgressBar value={p.current_progress} /></td><td><span className="badge">{statuses[p.status] || p.status}</span></td>
+        <section className="card" style={{marginTop:16}}><h2>Profils Arabe</h2>{arabicProfiles.length ? <div className="table-wrap"><table><thead><tr><th>Élève (français)</th><th>Nom écrit en arabe</th><th>Niveau</th><th>Responsable</th><th>Progression</th><th>Statut</th><th>Modification</th></tr></thead><tbody>{arabicProfiles.map((p:any)=><tr key={p.id}>
+        <td>{p.students?.last_name} {p.students?.first_name}</td><td dir="rtl" lang="ar">{text(p.arabic_full_name)}</td><td>{text(p.arabic_levels?.name)}</td><td>{text(p.employees ? `${p.employees.last_name} ${p.employees.first_name}` : null)}</td><td><ProgressBar value={p.current_progress} /></td><td><span className="badge">{statuses[p.status] || p.status}</span></td>
       <td><details><summary>Modifier le profil</summary><form action={assignStudentArabic} className="grid" style={{minWidth:280,marginTop:8}}>
         <input type="hidden" name="studentId" value={p.student_id}/>
         <label className="field"><span className="label">Nom en français</span><input className="input" name="lastName" required maxLength={120} defaultValue={p.students?.last_name ?? ''}/></label>
@@ -74,9 +79,9 @@ export default async function ArabicPage({ searchParams }: { searchParams: Promi
     </tr>)}</tbody></table></div> : <p className="empty">Aucun profil Arabe.</p>}</section>
 
     <section className="card" style={{marginTop:16}}><h2>Enregistrer une séance</h2><form action={recordArabicSession} className="grid grid-3">
-      <div className="field"><label className="label">Élève</label><select className="select" name="studentId" required><option value="">Choisir</option>{profiles?.map((p:any)=><option key={p.student_id} value={p.student_id}>{arabicStudentLabel(p)}</option>)}</select></div>
+      <div className="field"><label className="label">Élève</label><select className="select" name="studentId" required><option value="">{arabicProfiles.length ? 'Choisir' : 'Aucun élève Arabe disponible'}</option>{arabicProfiles.map((p:any)=><option key={p.student_id} value={p.student_id}>{arabicStudentLabel(p)}</option>)}</select>{!profilesError && !arabicProfiles.length ? <small className="field-hint">Créez d’abord un profil dans « Affecter / mettre à jour un élève ».</small> : null}</div>
       <div className="field"><label className="label">Date</label><input className="input" name="sessionDate" type="date" required /></div>
-      <div className="field"><label className="label">Activité</label><input className="input" name="activityType" required placeholder="Ex. lecture, grammaire, vocabulaire…" /></div>
+      <div className="field"><label className="label">Activité / matière</label><select className="select" name="activityType" required defaultValue=""><option value="" disabled>Choisir une matière Arabe</option>{arabicSubjects?.map((subject: any) => <option key={subject.id} value={subject.name}>{subject.name} — {subject.code}</option>)}</select>{!arabicSubjectsError && !arabicSubjects?.length ? <small className="field-hint">Aucune matière active du domaine Arabe. Configurez-les dans <Link href="/pedagogie/matieres">Matières</Link>.</small> : null}</div>
       <div className="field"><label className="label">Thème / contenu</label><input className="input" name="topic" /></div>
       <div className="field"><label className="label">Score</label><input className="input" name="score" type="number" min="0" step="0.01" /></div>
       <div className="field"><label className="label">Présence</label><select className="select" name="attendanceStatus">{Object.entries(attendance).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></div>
@@ -88,7 +93,7 @@ export default async function ArabicPage({ searchParams }: { searchParams: Promi
     </form></section>
 
     <section className="card" style={{marginTop:16}}><h2>Évaluation Arabe</h2><form action={createArabicEvaluation} className="grid grid-3">
-      <div className="field"><label className="label">Élève</label><select className="select" name="studentId" required><option value="">Choisir</option>{profiles?.map((p:any)=><option key={p.student_id} value={p.student_id}>{arabicStudentLabel(p)}</option>)}</select></div>
+      <div className="field"><label className="label">Élève</label><select className="select" name="studentId" required><option value="">{arabicProfiles.length ? 'Choisir' : 'Aucun élève Arabe disponible'}</option>{arabicProfiles.map((p:any)=><option key={p.student_id} value={p.student_id}>{arabicStudentLabel(p)}</option>)}</select>{!profilesError && !arabicProfiles.length ? <small className="field-hint">Créez d’abord un profil dans « Affecter / mettre à jour un élève ».</small> : null}</div>
       <div className="field"><label className="label">Période</label><select className="select" name="periodId"><option value="">Non définie</option>{periods?.map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
       <div className="field"><label className="label">Date</label><input className="input" name="evaluationDate" type="date" required /></div>
       <div className="field"><label className="label">Titre</label><input className="input" name="title" required placeholder="Évaluation" /></div>
