@@ -116,6 +116,9 @@ button, input, select, textarea { font: inherit; }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; box-shadow: 0 8px 24px rgba(15, 23, 42, .04); }
 .grid { display: grid; gap: 16px; }
+.grid > *, .payment-form { min-width: 0; }
+.payment-form .field { min-width: 0; }
+.delete-action { margin-top: 8px; }
 .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -264,6 +267,13 @@ tr:last-child td { border-bottom: 0; }
 .it-access-status-form { display: flex; align-items: end; gap: 12px; margin-top: 16px; }
 .it-access-role-list { display: grid; gap: 8px; margin-top: 16px; }
 .it-access-role { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
+.it-permission-editor { display: grid; gap: 12px; margin-top: 16px; }
+.it-permission-group { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 12px; border: 1px solid var(--border); border-radius: 12px; }
+.it-permission-group legend { padding: 0 6px; font-weight: 700; text-transform: capitalize; }
+.it-permission-override { display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, .8fr); align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.it-permission-override:last-child { border-bottom: 0; }
+.it-permission-override > span { display: grid; gap: 3px; min-width: 0; }
+.it-permission-override small { overflow-wrap: anywhere; color: var(--muted); font-size: 11px; }
 .it-access-role > div { display: grid; flex: 1; gap: 4px; }
 .it-access-page-list { display: flex; flex-wrap: wrap; gap: 8px; }
 .it-access-page { display: inline-flex; align-items: center; gap: 9px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-soft); font-size: 13px; font-weight: 700; }
@@ -302,6 +312,7 @@ tr:last-child td { border-bottom: 0; }
   .it-access-status-form { align-items: stretch; flex-direction: column; }
   .it-access-profile { align-items: flex-start; flex-direction: column; }
   .it-access-role { flex-wrap: wrap; }
+  .it-permission-override { grid-template-columns: 1fr; gap: 6px; }
   .login-topbar { min-height: 38px; font-size: 10px; }
   .login-scene { min-height: calc(100svh - 174px); padding: 22px 14px; }
   .login-accent-green { right: 4%; width: 7px; }
@@ -368,6 +379,9 @@ tr:last-child td { border-bottom: 0; }
   .nav-home { min-height: 40px; }
   .nav-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 3px 8px; }
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .payment-form { padding: 16px; }
+  .payment-form .grid { grid-template-columns: minmax(0, 1fr); }
+  .payment-form .select, .payment-form .input { min-width: 0; }
   .page-header { flex-direction: column; }
 }
 

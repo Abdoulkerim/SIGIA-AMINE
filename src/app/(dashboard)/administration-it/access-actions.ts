@@ -22,9 +22,41 @@ function accessUrl(userId?: string, error?: string, updated?: string) {
 
 async function getAccessManager() {
   const context = await getCurrentUserContext()
-  const canManage = context?.roles.some(({ code }) => code === 'it_admin')
+  const canManage = context?.roles.some(({ code }) => ['it_admin', 'super_admin', 'founder'].includes(code ?? ''))
   if (!context || !canManage || !context.profile.school_id) return null
   return { context, schoolId: context.profile.school_id, supabase: await createClient() }
+}
+
+export async function saveUserPermissionOverrides(formData: FormData) {
+  const target = uuid.safeParse(formData.get('userId'))
+  if (!target.success) redirect(accessUrl(undefined, 'Utilisateur invalide.'))
+  const manager = await getAccessManager()
+  if (!manager) redirect(accessUrl(target.data, 'Accès non autorisé.'))
+  const { context, schoolId, supabase } = manager
+  if (target.data === context.profile.id) redirect(accessUrl(target.data, 'Vous ne pouvez pas modifier vos propres permissions.'))
+  if (!await ensureTargetUser(supabase, target.data, schoolId)) redirect(accessUrl(target.data, 'Utilisateur introuvable dans cet établissement.'))
+
+  const granted: string[] = []
+  const denied: string[] = []
+  for (const value of formData.getAll('permissionOverride')) {
+    if (typeof value !== 'string') redirect(accessUrl(target.data, 'Permission invalide.'))
+    const [permissionId, effect, extra] = value.split(':')
+    if (!uuid.safeParse(permissionId).success || extra !== undefined || typeof effect !== 'string' || !['inherit', 'grant', 'deny'].includes(effect)) {
+      redirect(accessUrl(target.data, 'Permission invalide.'))
+    }
+    if (effect === 'grant') granted.push(permissionId)
+    if (effect === 'deny') denied.push(permissionId)
+  }
+
+  const { error } = await (supabase as any).rpc('set_user_permission_overrides', {
+    p_user_id: target.data,
+    p_school_id: schoolId,
+    p_granted_permission_ids: granted,
+    p_denied_permission_ids: denied,
+  })
+  if (error) redirect(accessUrl(target.data, `Modification des permissions refusée : ${error.message}`))
+  invalidateAccessPages()
+  redirect(accessUrl(target.data, undefined, 'permissions'))
 }
 
 async function ensureTargetUser(supabase: Awaited<ReturnType<typeof createClient>>, userId: string, schoolId: string) {

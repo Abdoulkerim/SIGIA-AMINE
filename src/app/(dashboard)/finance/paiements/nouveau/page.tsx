@@ -22,11 +22,11 @@ export default async function NewPaymentPage({ searchParams }: { searchParams: P
   let enrollments: Array<{ student_id: string; class_id: string | null; education_stage: string | null }> = []
   if (schoolYearId) {
     const [classResult, enrollmentResult] = await Promise.all([
-      supabase.from('classes').select('id,name,code').eq('school_id', schoolId).eq('school_year_id', schoolYearId).order('name'),
-      supabase.from('enrollments').select('student_id,class_id,education_stage').eq('school_id', schoolId).eq('school_year_id', schoolYearId).eq('status', 'enrolled'),
+      fetchAllRows<{ id: string; name: string; code: string | null }>(() => supabase.from('classes').select('id,name,code').eq('school_id', schoolId).eq('school_year_id', schoolYearId).order('name').order('id')),
+      fetchAllRows<{ student_id: string; class_id: string | null; education_stage: string | null }>(() => supabase.from('enrollments').select('student_id,class_id,education_stage').eq('school_id', schoolId).eq('school_year_id', schoolYearId).eq('status', 'enrolled').order('student_id')),
     ])
-    classes = classResult.data ?? []
-    enrollments = enrollmentResult.data ?? []
+    classes = classResult.data
+    enrollments = enrollmentResult.data
   }
   const now = new Date().toISOString()
 
@@ -34,7 +34,7 @@ export default async function NewPaymentPage({ searchParams }: { searchParams: P
     <div className="page-header"><div><h1 className="page-title">Enregistrer un paiement</h1><p className="page-subtitle">Chaque paiement doit être affecté à une facture ou à un frais direct.</p></div><Link className="button button-secondary" href="/finance/paiements">Retour</Link></div>
     {query.error ? <p className="error">{query.error}</p> : null}
     {studentsError || invoicesError ? <p className="error">Impossible de charger tous les élèves ou leurs factures. Réessayez après actualisation.</p> : null}
-    <form className="card" action={recordPayment}>
+    <form className="card payment-form" action={recordPayment}>
       <div className="grid grid-2">
         <PaymentTargetFields students={students ?? []} classes={classes ?? []} enrollments={enrollments ?? []} invoices={(invoices ?? []).map((invoice) => ({ ...invoice, total: Number(invoice.total) }))} />
         <div className="field"><label className="label" htmlFor="parentId">Parent payeur</label><select className="select" id="parentId" name="parentId"><option value="">—</option>{parents?.map((parent) => <option key={parent.id} value={parent.id}>{parent.last_name} {parent.first_name}</option>)}</select></div>

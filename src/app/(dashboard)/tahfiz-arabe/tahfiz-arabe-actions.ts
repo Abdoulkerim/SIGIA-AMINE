@@ -100,11 +100,12 @@ export async function publishTahfizSession(formData: FormData) {
 export async function createArabicLevel(formData: FormData) {
   const code = z.string().trim().min(1).max(60).safeParse(formData.get('code'))
   const name = z.string().trim().min(1).max(160).safeParse(formData.get('name'))
+  const frenchName = z.string().trim().min(1).max(160).safeParse(formData.get('frenchName'))
   const sequence = num.int().min(0).safeParse(formData.get('sequenceNo') || 0)
   const description = z.string().trim().max(500).optional().safeParse(formData.get('description') || undefined)
-  if (![code, name, sequence, description].every((x) => x.success)) fail('/tahfiz-arabe/arabe', 'Niveau Arabe invalide.')
+  if (![code, name, frenchName, sequence, description].every((x) => x.success)) fail('/tahfiz-arabe/arabe', 'Niveau Arabe invalide.')
   const supabase = await createClient()
-  const { error } = await supabase.rpc('create_arabic_level', { p_code: code.data, p_name: name.data, p_sequence_no: sequence.data, p_description: description.data ?? null })
+  const { error } = await (supabase as any).rpc('create_arabic_level', { p_code: code.data, p_name: name.data, p_french_name: frenchName.data, p_sequence_no: sequence.data, p_description: description.data ?? null })
   if (error) fail('/tahfiz-arabe/arabe', error.message)
   revalidatePath('/tahfiz-arabe/arabe')
   revalidatePath('/tahfiz-arabe')
@@ -115,14 +116,17 @@ export async function updateArabicLevel(formData: FormData) {
   const id = uuid.safeParse(formData.get('levelId'))
   const code = z.string().trim().min(1).max(60).safeParse(formData.get('code'))
   const name = z.string().trim().min(1).max(160).safeParse(formData.get('name'))
+  const frenchName = z.string().trim().min(1).max(160).safeParse(formData.get('frenchName'))
   const sequence = num.int().min(0).safeParse(formData.get('sequenceNo') || 0)
   const description = z.string().trim().max(500).optional().safeParse(formData.get('description') || undefined)
   if (![id, code, name, sequence, description].every((value) => value.success)) fail('/tahfiz-arabe/arabe', 'Vérifiez les informations du niveau Arabe.')
+  if (!frenchName.success) fail('/tahfiz-arabe/arabe', 'Le nom français de la classe est obligatoire.')
   const supabase = await createClient()
   const { error } = await (supabase as any).rpc('update_arabic_level', {
     p_level_id: id.data,
     p_code: code.data,
     p_name: name.data,
+    p_french_name: frenchName.data,
     p_sequence_no: sequence.data,
     p_description: description.data ?? null,
     p_is_active: formData.get('isActive') === 'on',
@@ -131,6 +135,17 @@ export async function updateArabicLevel(formData: FormData) {
   revalidatePath('/tahfiz-arabe/arabe')
   revalidatePath('/tahfiz-arabe')
   redirect('/tahfiz-arabe/arabe?updated=1')
+}
+
+export async function deleteArabicLevel(formData: FormData) {
+  const id = uuid.safeParse(formData.get('levelId'))
+  if (!id.success) fail('/tahfiz-arabe/arabe', 'Niveau Arabe invalide.')
+  const supabase = await createClient()
+  const { error } = await (supabase as any).rpc('delete_arabic_level', { p_level_id: id.data })
+  if (error) fail('/tahfiz-arabe/arabe', error.message)
+  revalidatePath('/tahfiz-arabe/arabe')
+  revalidatePath('/tahfiz-arabe')
+  redirect('/tahfiz-arabe/arabe?deletedLevel=1')
 }
 
 export async function assignStudentArabic(formData: FormData) {
@@ -156,6 +171,17 @@ export async function assignStudentArabic(formData: FormData) {
   revalidatePath('/tahfiz-arabe')
   revalidatePath('/administration/eleves')
   redirect('/tahfiz-arabe/arabe?assigned=1')
+}
+
+export async function deleteArabicProfile(formData: FormData) {
+  const id = uuid.safeParse(formData.get('profileId'))
+  if (!id.success) fail('/tahfiz-arabe/arabe', 'Profil Arabe invalide.')
+  const supabase = await createClient()
+  const { error } = await (supabase as any).rpc('delete_student_arabic_profile', { p_profile_id: id.data })
+  if (error) fail('/tahfiz-arabe/arabe', error.message)
+  revalidatePath('/tahfiz-arabe/arabe')
+  revalidatePath('/tahfiz-arabe')
+  redirect('/tahfiz-arabe/arabe?deletedProfile=1')
 }
 
 export async function recordArabicSession(formData: FormData) {

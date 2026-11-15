@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
-import { assignUserRole, revokeUserRole, updateUserEducationStage, updateUserLoginAccess } from '../access-actions'
+import { assignUserRole, revokeUserRole, updateUserEducationStage, updateUserLoginAccess, saveUserPermissionOverrides } from '../access-actions'
 
 const educationStages: Record<string, string> = {
   maternelle: 'Maternelle',
@@ -55,14 +55,15 @@ const pageByPermission: Record<string, { label: string; href: string }[]> = {
 export default async function UserAccessPage({ searchParams }: { searchParams: Promise<{ userId?: string; error?: string; updated?: string }> }) {
   const params = await searchParams
   const context = await getCurrentUserContext()
-  if (!context?.roles.some(({ code }) => code === 'it_admin')) return <main className="page"><p className="error">Seul un Administrateur informatique peut gérer les accès utilisateurs.</p></main>
+  if (!context?.roles.some(({ code }) => ['it_admin', 'super_admin', 'founder'].includes(code ?? ''))) return <main className="page"><p className="error">Un administrateur autorisé est requis pour gérer les accès utilisateurs.</p></main>
   if (!context.profile.school_id) return <main className="page"><p className="empty">Aucun établissement associé à ce compte.</p></main>
 
   const schoolId = context.profile.school_id
   const supabase = await createClient()
-  const [{ data: users, error: usersError }, { data: roles, error: rolesError }] = await Promise.all([
+  const [{ data: users, error: usersError }, { data: roles, error: rolesError }, { data: allPermissions, error: permissionsError }] = await Promise.all([
     supabase.from('users').select('id,first_name,last_name,email,status,education_stage').eq('school_id', schoolId).order('last_name').limit(300),
     supabase.from('roles').select('id,name,code,description,role_permissions(permissions(code,name,module,action))').order('name'),
+    supabase.from('permissions').select('id,code,name,module,action,description').order('module').order('name'),
   ])
 
   const selectedUser = (users ?? []).find((user) => user.id === params.userId)
@@ -79,6 +80,10 @@ export default async function UserAccessPage({ searchParams }: { searchParams: P
         .order('created_at')
     : { data: [], error: null }
 
+  const { data: permissionOverrides, error: permissionOverridesError } = selectedUser && selectedUser.id !== context.profile.id
+    ? await (supabase as any).from('user_permission_overrides').select('permission_id,is_granted').eq('user_id', selectedUser.id).eq('school_id', schoolId)
+    : { data: [], error: null }
+
   const isPrivilegedManager = context.roles.some(({ code }) => ['super_admin', 'founder'].includes(code ?? ''))
   const assignableRoles = (roles ?? []).filter((role) => isPrivilegedManager || !['super_admin', 'founder', 'it_admin'].includes(role.code))
   const permissions = new Map<string, { code: string; name: string; module: string }>()
@@ -89,6 +94,19 @@ export default async function UserAccessPage({ searchParams }: { searchParams: P
       const permission = item.permissions
       if (permission?.code) permissions.set(permission.code, permission)
     }
+  }
+  const rolePermissionCodes = new Set(permissions.keys())
+  const overrideByPermission = new Map<string, boolean>((permissionOverrides ?? []).map((item: any) => [item.permission_id, item.is_granted]))
+  for (const permission of allPermissions ?? []) {
+    if (!overrideByPermission.has(permission.id)) continue
+    if (overrideByPermission.get(permission.id)) permissions.set(permission.code, permission)
+    else permissions.delete(permission.code)
+  }
+  const permissionGroups = new Map<string, any[]>()
+  for (const permission of allPermissions ?? []) {
+    const group = permissionGroups.get(permission.module) ?? []
+    group.push(permission)
+    permissionGroups.set(permission.module, group)
   }
   const accessiblePages = new Map<string, { label: string; href: string }>()
   if (selectedUser?.status === 'active') {
@@ -101,12 +119,14 @@ export default async function UserAccessPage({ searchParams }: { searchParams: P
     <main className="page">
       <div className="page-header"><div><h1 className="page-title">AccÃ¨s utilisateurs</h1><p className="page-subtitle">Attribuez les rÃ´les, contrÃ´lez lâ€™accÃ¨s Ã  la connexion et consultez les pages ouvertes Ã  chaque compte.</p></div><span className="badge">ContrÃ´le dâ€™accÃ¨s</span></div>
       {params.error ? <p className="error">{params.error}</p> : null}
+      {params.updated === 'permissions' ? <p className="success">Les permissions de l’utilisateur ont été mises à jour.</p> : null}
       {params.updated === 'role' ? <p className="success">Les rÃ´les de lâ€™utilisateur ont Ã©tÃ© mis Ã  jour.</p> : null}
       {params.updated === 'status' ? <p className="success">Lâ€™accÃ¨s Ã  la connexion a Ã©tÃ© mis Ã  jour.</p> : null}
       {params.updated === 'stage' ? <p className="success">Le cycle scolaire de lâ€™utilisateur a Ã©tÃ© mis Ã  jour.</p> : null}
       {usersError ? <p className="error">Impossible de charger les utilisateurs : {usersError.message}</p> : null}
       {rolesError ? <p className="error">Impossible de charger les rÃ´les : {rolesError.message}</p> : null}
 
+      {permissionsError ? <p className="error">Impossible de charger les permissions : {permissionsError.message}</p> : null}
       <section className="it-access-layout">
         <aside className="card it-access-user-list">
           <h2>Utilisateurs</h2>
@@ -173,6 +193,36 @@ export default async function UserAccessPage({ searchParams }: { searchParams: P
                 ))}
                 {!assignments?.length ? <p className="empty">Aucun rÃ´le attribuÃ© Ã  cet utilisateur.</p> : null}
               </div>
+            </section>
+
+            <section className="card">
+              <h2 style={{ marginTop: 0 }}>Permissions de cet utilisateur</h2>
+              <p className="page-subtitle">Choisissez si chaque permission est héritée de ses rôles, accordée directement ou refusée directement. Un refus direct bloque aussi une permission accordée par un rôle.</p>
+              {permissionOverridesError ? <p className="error">Impossible de charger les permissions personnalisées : {permissionOverridesError.message}</p> : null}
+              {selectedUser.id !== context.profile.id ? (
+                <form action={saveUserPermissionOverrides} className="it-permission-editor">
+                  <input type="hidden" name="userId" value={selectedUser.id} />
+                  {Array.from(permissionGroups.entries()).map(([module, modulePermissions]) => (
+                    <fieldset className="it-permission-group" key={module}>
+                      <legend>{module}</legend>
+                      {modulePermissions.map((permission: any) => {
+                        const override = overrideByPermission.get(permission.id)
+                        const inherited = rolePermissionCodes.has(permission.code)
+                        const initialEffect = override === undefined ? 'inherit' : override ? 'grant' : 'deny'
+                        return <label className="it-permission-override" key={permission.id}>
+                          <span><strong>{permission.name}</strong><small>{permission.code}{permission.description ? ` · ${permission.description}` : ''}</small></span>
+                          <select className="select" name="permissionOverride" defaultValue={`${permission.id}:${initialEffect}`} aria-label={`${permission.name}, ${inherited ? 'accordée' : 'non accordée'} par les rôles`}>
+                            <option value={`${permission.id}:inherit`}>{inherited ? 'Hériter du rôle · accordée' : 'Hériter du rôle · non accordée'}</option>
+                            <option value={`${permission.id}:grant`} disabled={!isPrivilegedManager && ['users.manage', 'users.roles.manage', 'settings.manage', 'audit.view'].includes(permission.code)}>Autoriser directement</option>
+                            <option value={`${permission.id}:deny`}>Refuser directement</option>
+                          </select>
+                        </label>
+                      })}
+                    </fieldset>
+                  ))}
+                  <button className="button button-primary" type="submit">Enregistrer les permissions</button>
+                </form>
+              ) : <p className="page-subtitle">La modification des permissions de votre propre compte est désactivée.</p>}
             </section>
 
             <section className="card">

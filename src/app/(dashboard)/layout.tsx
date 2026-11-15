@@ -12,7 +12,6 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
 
   const schoolId = context.profile.school_id
   const role = context.roles.find((r) => r.schoolId === schoolId) ?? context.roles[0]
-  const canAccessIT = context.roles.some(({ code }) => code === 'it_admin' || code === 'super_admin')
   const supabase = await createClient()
   const { data: roleAssignments } = await supabase
     .from('user_roles')
@@ -28,6 +27,16 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       if (typeof code === 'string') permissionCodes.add(code)
     }
   }
+  const { data: permissionOverrides } = schoolId
+    ? await (supabase as any).from('user_permission_overrides').select('is_granted,permissions(code)').eq('user_id', context.profile.id).eq('school_id', schoolId)
+    : { data: [] }
+  for (const override of permissionOverrides ?? []) {
+    const code = override.permissions?.code
+    if (typeof code !== 'string') continue
+    if (override.is_granted) permissionCodes.add(code)
+    else permissionCodes.delete(code)
+  }
+  const canAccessIT = context.roles.some(({ code }) => code === 'it_admin' || code === 'super_admin')
   const displayName = `${context.profile.first_name} ${context.profile.last_name}`
 
   return (
