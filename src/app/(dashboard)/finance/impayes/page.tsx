@@ -1,22 +1,27 @@
 import { createClient } from '@/lib/supabase/server'
+import { loadFinanceDirectory } from '@/lib/finance/finance-directory'
 
 const money = (amount: number) => `${amount.toLocaleString('fr-FR')} FCFA`
 
 export default async function UnpaidPage({ searchParams }: { searchParams: Promise<{ error?: string; reminded?: string }> }) {
   const q = await searchParams
   const supabase = await createClient()
-  const [{ data: invoices }, { data: charges }] = await Promise.all([
+  const [{ data: invoices }, { data: charges }, directory] = await Promise.all([
     supabase
       .from('invoices')
-      .select('id,invoice_number,student_id,due_date,total,status,students(first_name,last_name,student_number),payment_allocations(amount)')
+      .select('id,invoice_number,student_id,due_date,total,status,payment_allocations(amount)')
       .in('status', ['pending', 'partially_paid'])
       .order('due_date'),
     supabase
       .from('student_charges')
-      .select('id,student_id,fee_type_id,due_date,amount_due,status,students(first_name,last_name,student_number),fee_types(name),payment_allocations(amount)')
+      .select('id,student_id,fee_type_id,due_date,amount_due,status,fee_types(name),payment_allocations(amount)')
       .in('status', ['pending', 'partially_paid'])
       .order('due_date'),
+    loadFinanceDirectory(supabase),
   ])
+  const studentsById = new Map((directory.data?.students ?? []).map((student) => [student.id, student]))
+  const invoiceRows = (invoices ?? []).map((invoice) => ({ ...invoice, students: studentsById.get(invoice.student_id) ?? null }))
+  const chargeRows = (charges ?? []).map((charge) => ({ ...charge, students: studentsById.get(charge.student_id) ?? null }))
 
   return (
     <main className="page">
@@ -28,6 +33,7 @@ export default async function UnpaidPage({ searchParams }: { searchParams: Promi
       </div>
       {q.error ? <p className="error">{q.error}</p> : null}
       {q.reminded ? <p className="success">Relance enregistrée.</p> : null}
+      {directory.error ? <p className="error">{directory.error}</p> : null}
 
       <section className="card" style={{ marginBottom: 16 }}>
         <h2>Montant des factures restant à payer</h2>
@@ -35,7 +41,7 @@ export default async function UnpaidPage({ searchParams }: { searchParams: Promi
           <table>
             <thead><tr><th>Facture</th><th>Élève</th><th>Échéance</th><th>Reste à payer</th><th>Statut</th></tr></thead>
             <tbody>
-              {invoices?.map((invoice: any) => {
+              {invoiceRows.map((invoice: any) => {
                 const paid = (invoice.payment_allocations ?? []).reduce(
                   (sum: number, allocation: { amount: number }) => sum + Number(allocation.amount ?? 0),
                   0,
@@ -55,7 +61,7 @@ export default async function UnpaidPage({ searchParams }: { searchParams: Promi
             </tbody>
           </table>
         </div>
-        {!invoices?.length ? <p className="empty">Aucune facture impayée.</p> : null}
+        {!invoiceRows.length ? <p className="empty">Aucune facture impayée.</p> : null}
       </section>
 
       <section className="card">
@@ -64,7 +70,7 @@ export default async function UnpaidPage({ searchParams }: { searchParams: Promi
           <table>
             <thead><tr><th>Élève</th><th>Frais</th><th>Échéance</th><th>Reste à payer</th><th>Statut</th></tr></thead>
             <tbody>
-              {charges?.map((charge: any) => {
+              {chargeRows.map((charge: any) => {
                 const paid = (charge.payment_allocations ?? []).reduce(
                   (sum: number, allocation: { amount: number }) => sum + Number(allocation.amount ?? 0),
                   0,
@@ -84,7 +90,7 @@ export default async function UnpaidPage({ searchParams }: { searchParams: Promi
             </tbody>
           </table>
         </div>
-        {!charges?.length ? <p className="empty">Aucun reste à payer sur les frais directs.</p> : null}
+        {!chargeRows.length ? <p className="empty">Aucun reste à payer sur les frais directs.</p> : null}
       </section>
 
       <section className="card" style={{ marginTop: 16 }}>

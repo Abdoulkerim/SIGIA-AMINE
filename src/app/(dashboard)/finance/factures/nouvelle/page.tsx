@@ -8,9 +8,8 @@ import { InvoiceStudentFields } from './invoice-student-fields'
 export default async function NewInvoicePage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const query = await searchParams
   const supabase = await createClient()
-  const [{ data: studentResult, error: studentLoadError }, { data: parents }, { data: fees }] = await Promise.all([
+  const [{ data: studentResult, error: studentLoadError }, { data: fees }] = await Promise.all([
     supabase.functions.invoke('managed-user-directory', { body: { action: 'invoice-students' } }),
-    supabase.from('parents').select('id,first_name,last_name,phone').order('last_name').limit(500),
     supabase.from('fee_types').select('id,code,name,default_amount').eq('is_active', true).order('name'),
   ])
   let studentErrorMessage: string | null = null
@@ -23,6 +22,7 @@ export default async function NewInvoicePage({ searchParams }: { searchParams: P
   const students = studentResult?.students ?? []
   const classes = studentResult?.classes ?? []
   const enrollments = studentResult?.enrollments ?? []
+  const parents = studentResult?.parents ?? []
   const today = new Date().toISOString().slice(0, 10)
 
   return (

@@ -3,14 +3,18 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { updatePaymentDetails } from '../../../finance-actions'
 import { canManageFinance } from '@/lib/auth/finance-access'
+import { loadFinanceDirectory } from '@/lib/finance/finance-directory'
 
 export default async function EditPaymentPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; updated?: string }> }) {
   const [{ id }, query, canEdit] = await Promise.all([params, searchParams, canManageFinance()])
   if (!canEdit) notFound()
   const supabase = await createClient()
-  const { data: payment } = await supabase.from('payments').select('id,payment_number,payment_date,amount,method,reference,notes,students(first_name,last_name,student_number)').eq('id', id).maybeSingle()
+  const [{ data: payment }, directory] = await Promise.all([
+    supabase.from('payments').select('id,payment_number,payment_date,amount,method,reference,notes,student_id').eq('id', id).maybeSingle(),
+    loadFinanceDirectory(supabase),
+  ])
   if (!payment) notFound()
-  const student: any = Array.isArray(payment.students) ? payment.students[0] : payment.students
+  const student = directory.data?.students.find((item) => item.id === payment.student_id) ?? null
   const date = new Date(payment.payment_date)
   const dateValue = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
   return <main className="page"><div className="page-header"><div><h1 className="page-title">Modifier le paiement {payment.payment_number}</h1><p className="page-subtitle">{student ? `${student.student_number} · ${student.first_name} ${student.last_name}` : 'Élève'} · {Number(payment.amount).toLocaleString('fr-FR')} FCFA</p></div><Link className="button button-secondary" href="/finance/paiements">Retour</Link></div>

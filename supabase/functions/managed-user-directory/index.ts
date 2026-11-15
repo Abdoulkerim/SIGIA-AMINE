@@ -27,37 +27,49 @@ export default {
     if (caller?.status !== 'active') return errorResponse('Votre compte est inactif.', 403)
 
     const action = body.action
-    if (action === 'invoice-students') {
+    if (action === 'invoice-students' || action === 'finance-directory') {
       if (!caller.school_id) return errorResponse('Aucune école n’est associée à ce compte.', 403)
       const { data: assignments, error: assignmentsError } = await ctx.supabaseAdmin
         .from('user_roles').select('school_id,roles(role_permissions(permissions(code)))')
         .eq('user_id', callerId).eq('is_active', true)
       if (assignmentsError) return errorResponse('Impossible de vérifier vos autorisations financières.', 500)
-      const canManageFinance = (assignments ?? []).some((assignment: any) =>
+      const canAccessFinance = (assignments ?? []).some((assignment: any) =>
         (assignment.school_id === null || assignment.school_id === caller.school_id)
-        && (assignment.roles?.role_permissions ?? []).some((item: any) => item.permissions?.code === 'finance.manage'),
+        && (assignment.roles?.role_permissions ?? []).some((item: any) =>
+          action === 'invoice-students'
+            ? item.permissions?.code === 'finance.manage'
+            : ['finance.view', 'finance.manage'].includes(item.permissions?.code),
+        ),
       )
-      if (!canManageFinance) return errorResponse('La permission « Gérer finance » est requise pour facturer.', 403)
+      if (!canAccessFinance) return errorResponse(action === 'invoice-students'
+        ? 'La permission « Gérer finance » est requise pour facturer.'
+        : 'Une permission de consultation ou de gestion financière est requise.', 403)
 
       const { data: students, error: studentsError } = await ctx.supabaseAdmin.from('students')
-        .select('id,student_number,first_name,last_name')
+        .select('id,student_number,first_name,last_name,status')
         .eq('school_id', caller.school_id)
         .order('last_name').order('first_name').limit(1000)
       if (studentsError) return errorResponse('Impossible de charger les élèves de cette école.', 500)
-      const { data: years } = await ctx.supabaseAdmin.from('school_years')
-        .select('id,is_current').eq('school_id', caller.school_id).order('start_date', { ascending: false })
+      const [{ data: years, error: yearsError }, { data: parents, error: parentsError }] = await Promise.all([
+        ctx.supabaseAdmin.from('school_years')
+          .select('id,is_current').eq('school_id', caller.school_id).order('start_date', { ascending: false }),
+        ctx.supabaseAdmin.from('parents').select('id,first_name,last_name,phone')
+          .eq('school_id', caller.school_id).order('last_name').order('first_name').limit(1000),
+      ])
+      if (yearsError || parentsError) return errorResponse('Impossible de charger les listes financières.', 500)
       const currentYear = (years ?? []).find((year: any) => year.is_current) ?? years?.[0]
       let classes: any[] = []
       let enrollments: any[] = []
       if (currentYear) {
-        const [{ data: classRows }, { data: enrollmentRows }] = await Promise.all([
+        const [{ data: classRows, error: classError }, { data: enrollmentRows, error: enrollmentError }] = await Promise.all([
           ctx.supabaseAdmin.from('classes').select('id,name,code').eq('school_id', caller.school_id).eq('school_year_id', currentYear.id).order('name'),
-          ctx.supabaseAdmin.from('enrollments').select('student_id,class_id').eq('school_id', caller.school_id).eq('school_year_id', currentYear.id).eq('status', 'enrolled'),
+          ctx.supabaseAdmin.from('enrollments').select('student_id,class_id,education_stage').eq('school_id', caller.school_id).eq('school_year_id', currentYear.id).eq('status', 'enrolled'),
         ])
+        if (classError || enrollmentError) return errorResponse('Impossible de charger les classes et inscriptions de cette école.', 500)
         classes = classRows ?? []
         enrollments = enrollmentRows ?? []
       }
-      return Response.json({ students: students ?? [], classes, enrollments })
+      return Response.json({ students: students ?? [], classes, enrollments, parents: parents ?? [] })
     }
 
     const { data: assignments, error: assignmentsError } = await ctx.supabaseAdmin

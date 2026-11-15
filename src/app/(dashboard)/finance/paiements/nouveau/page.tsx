@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
 import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
+import { loadFinanceDirectory } from '@/lib/finance/finance-directory'
 import { recordPayment } from '../../finance-actions'
 import { PaymentTargetFields } from './payment-target-fields'
 
@@ -10,30 +11,21 @@ export default async function NewPaymentPage({ searchParams }: { searchParams: P
   const schoolId = context?.profile.school_id
   if (!schoolId) return null
   const supabase = await createClient()
-  const [{ data: students, error: studentsError }, { data: invoices, error: invoicesError }, { data: accounts }, { data: parents }, { data: years }] = await Promise.all([
-    fetchAllRows<{ id: string; student_number: string; first_name: string; last_name: string }>(() => supabase.from('students').select('id,student_number,first_name,last_name').eq('school_id', schoolId).eq('status', 'active').order('last_name').order('id')),
+  const [{ data: directory, error: directoryError }, { data: invoices, error: invoicesError }, { data: accounts }] = await Promise.all([
+    loadFinanceDirectory(supabase),
     fetchAllRows<{ id: string; invoice_number: string; student_id: string; total: number | string; status: string; due_date: string | null }>(() => supabase.from('invoices').select('id,invoice_number,student_id,total,status,due_date').eq('school_id', schoolId).in('status', ['pending', 'partially_paid']).order('due_date').order('id')),
     supabase.from('cash_accounts').select('id,name,account_type').eq('school_id', schoolId).eq('is_active', true).order('name'),
-    supabase.from('parents').select('id,first_name,last_name').eq('school_id', schoolId).order('last_name').limit(500),
-    supabase.from('school_years').select('id,is_current,start_date').eq('school_id', schoolId).order('start_date', { ascending: false }),
   ])
-  const schoolYearId = years?.find((year) => year.is_current)?.id ?? years?.[0]?.id
-  let classes: Array<{ id: string; name: string; code: string | null }> = []
-  let enrollments: Array<{ student_id: string; class_id: string | null; education_stage: string | null }> = []
-  if (schoolYearId) {
-    const [classResult, enrollmentResult] = await Promise.all([
-      fetchAllRows<{ id: string; name: string; code: string | null }>(() => supabase.from('classes').select('id,name,code').eq('school_id', schoolId).eq('school_year_id', schoolYearId).order('name').order('id')),
-      fetchAllRows<{ student_id: string; class_id: string | null; education_stage: string | null }>(() => supabase.from('enrollments').select('student_id,class_id,education_stage').eq('school_id', schoolId).eq('school_year_id', schoolYearId).eq('status', 'enrolled').order('student_id')),
-    ])
-    classes = classResult.data
-    enrollments = enrollmentResult.data
-  }
+  const students = directory?.students.filter((student) => student.status === 'active') ?? []
+  const classes = directory?.classes ?? []
+  const enrollments = directory?.enrollments ?? []
+  const parents = directory?.parents ?? []
   const now = new Date().toISOString()
 
   return <main className="page">
     <div className="page-header"><div><h1 className="page-title">Enregistrer un paiement</h1><p className="page-subtitle">Chaque paiement doit être affecté à une facture ou à un frais direct.</p></div><Link className="button button-secondary" href="/finance/paiements">Retour</Link></div>
     {query.error ? <p className="error">{query.error}</p> : null}
-    {studentsError || invoicesError ? <p className="error">Impossible de charger tous les élèves ou leurs factures. Réessayez après actualisation.</p> : null}
+    {directoryError || invoicesError ? <p className="error">{directoryError ?? 'Impossible de charger les factures à régler. Réessayez après actualisation.'}</p> : null}
     <form className="card payment-form" action={recordPayment}>
       <div className="grid grid-2">
         <PaymentTargetFields students={students ?? []} classes={classes ?? []} enrollments={enrollments ?? []} invoices={(invoices ?? []).map((invoice) => ({ ...invoice, total: Number(invoice.total) }))} />
