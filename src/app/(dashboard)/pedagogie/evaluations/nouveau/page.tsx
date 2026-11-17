@@ -10,21 +10,43 @@ export default async function NewAssessmentPage({ searchParams }: { searchParams
   const params = await searchParams
   const supabase = await createClient()
   const schoolId = context.profile.school_id
-  const [{ data: years }, { data: periods }, { data: classes }, { data: subjects }, { data: teachers }, { data: types }, { data: linkedTeacher }, { data: roleAssignments }] = await Promise.all([
-    supabase.from('school_years').select('id,name,is_current').eq('school_id', schoolId).order('start_date',{ascending:false}),
-    supabase.from('academic_periods').select('id,name,school_year_id,start_date,end_date,is_closed').in('school_year_id', (await supabase.from('school_years').select('id').eq('school_id', schoolId)).data?.map(x=>x.id) ?? []).order('sequence_no'),
-    supabase.from('classes').select('id,name,code,school_year_id').eq('school_id', schoolId).eq('is_active',true).order('name'),
-    supabase.from('subjects').select('id,name,code').eq('school_id', schoolId).eq('is_active',true).order('name'),
-    supabase.from('employees').select('id,first_name,last_name,employee_number').eq('school_id', schoolId).eq('status','active').order('last_name'),
-    supabase.from('assessment_types').select('id,name').eq('school_id', schoolId).eq('is_active',true).order('name'),
-    supabase.from('employees').select('id,first_name,last_name,employee_number,teacher_profiles!inner(employee_id)').eq('school_id', schoolId).eq('user_id', context.profile.id).eq('status','active').maybeSingle(),
+  const { data: years, error: yearsError } = await supabase.from('school_years')
+    .select('id,name,is_current').eq('school_id', schoolId).order('start_date', { ascending: false })
+  const yearIds = (years ?? []).map((year) => year.id)
+  const [periodResult, classResult, subjectResult, teacherResult, typeResult, linkedTeacherResult, roleResult] = await Promise.all([
+    yearIds.length
+      ? supabase.from('academic_periods').select('id,name,school_year_id,start_date,end_date,is_closed').in('school_year_id', yearIds).order('sequence_no')
+      : Promise.resolve({ data: [], error: null }),
+    supabase.from('classes').select('id,name,code,school_year_id').eq('school_id', schoolId).eq('is_active', true).order('name'),
+    supabase.from('subjects').select('id,name,code').eq('school_id', schoolId).eq('is_active', true).order('name'),
+    supabase.from('employees').select('id,first_name,last_name,employee_number').eq('school_id', schoolId).eq('status', 'active').order('last_name'),
+    supabase.from('assessment_types').select('id,name').eq('school_id', schoolId).eq('is_active', true).order('name'),
+    supabase.from('employees').select('id,first_name,last_name,employee_number,teacher_profiles!inner(employee_id)').eq('school_id', schoolId).eq('user_id', context.profile.id).eq('status', 'active').maybeSingle(),
     supabase.from('user_roles').select('school_id,roles(role_permissions(permissions(code)))').eq('user_id', context.profile.id).eq('is_active', true),
   ])
+  const { data: periods, error: periodsError } = periodResult
+  const { data: classes, error: classesError } = classResult
+  const { data: subjects, error: subjectsError } = subjectResult
+  const { data: teachers, error: teachersError } = teacherResult
+  const { data: types, error: typesError } = typeResult
+  const { data: linkedTeacher, error: linkedTeacherError } = linkedTeacherResult
+  const { data: roleAssignments, error: roleAssignmentsError } = roleResult
   const currentYear = years?.find(y=>y.is_current) ?? years?.[0]
   const teacherProfile = linkedTeacher ? { id: linkedTeacher.id, first_name: linkedTeacher.first_name, last_name: linkedTeacher.last_name, employee_number: linkedTeacher.employee_number } : null
-  const { data: assignments } = teacherProfile
+  const { data: assignments, error: assignmentsError } = teacherProfile
     ? await supabase.from('teacher_assignments').select('school_year_id,class_id,subject_id,teacher_id').eq('school_id', schoolId).eq('teacher_id', teacherProfile.id)
-    : { data: [] }
+    : { data: [], error: null }
+  const loadErrors = [
+    yearsError ? `Années scolaires : ${yearsError.message}` : null,
+    periodsError ? `Périodes : ${periodsError.message}` : null,
+    classesError ? `Classes : ${classesError.message}` : null,
+    subjectsError ? `Matières : ${subjectsError.message}` : null,
+    teachersError ? `Enseignants : ${teachersError.message}` : null,
+    typesError ? `Types d’évaluation : ${typesError.message}` : null,
+    linkedTeacherError ? `Profil enseignant : ${linkedTeacherError.message}` : null,
+    assignmentsError ? `Affectations : ${assignmentsError.message}` : null,
+    roleAssignmentsError ? `Autorisations : ${roleAssignmentsError.message}` : null,
+  ].filter((error): error is string => Boolean(error))
   const canManagePeriods = context.roles.some(role => role.code === 'super_admin') || (roleAssignments ?? []).some((assignment: any) =>
     (assignment.school_id === null || assignment.school_id === schoolId)
     && (assignment.roles?.role_permissions ?? []).some((item: any) => ['settings.manage', 'assessments.manage'].includes(item.permissions?.code)),
@@ -34,6 +56,7 @@ export default async function NewAssessmentPage({ searchParams }: { searchParams
       <div className="page-header"><div><h1 className="page-title">Nouvelle évaluation</h1><p className="page-subtitle">Le serveur vérifiera la cohérence année/période/classe/matière/enseignant.</p></div><Link className="button button-secondary" href="/pedagogie/evaluations">Retour</Link></div>
       {params.error ? <p className="error">{params.error}</p> : null}
       {params.periodCreated ? <p className="success">La période a été créée.</p> : null}
+      {loadErrors.length ? <p className="error">Certaines listes d’évaluation n’ont pas pu être chargées : {loadErrors.join(' • ')}</p> : null}
       <p className="field-hint">Le coefficient dépend du couple matière / classe. Configurez-le sur la fiche de la matière, dans « Rattacher la matière à une classe et une année », avant de créer l’évaluation. <Link href="/pedagogie/matieres">Ouvrir les matières</Link></p>
       <section className="card">
         <form action={createAssessment}>

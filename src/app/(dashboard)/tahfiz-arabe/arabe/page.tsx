@@ -31,28 +31,23 @@ export default async function ArabicPage({ searchParams }: { searchParams: Promi
   if (!context?.profile.school_id) return null
   const supabase = await createClient()
   const schoolId = context.profile.school_id
-  const [{ data: levels }, { data: students }, { data: staffJson, error: staffError }, { data: periodsJson }, { data: profiles, error: profilesError }, { data: sessions }, { data: evaluations }, { data: arabicSubjects, error: arabicSubjectsError }] = await Promise.all([
+  const [{ data: levels }, { data: optionsJson, error: optionsError }, { data: staffJson, error: staffError }, { data: profiles, error: profilesError }, { data: sessions }, { data: evaluations }] = await Promise.all([
     supabase.from('arabic_levels').select('id,code,name,name_fr,education_stage,sequence_no,is_active,description').eq('school_id',schoolId).order('sequence_no').order('name'),
-    supabase.from('students').select('id,student_number,first_name,last_name').eq('school_id',schoolId).order('last_name').order('first_name'),
+    supabase.rpc('get_specialized_form_options', { p_module: 'arabic' }),
     supabase.rpc('get_specialized_staff', { p_module: 'arabic' }),
-    supabase.rpc('get_specialized_periods'),
     (supabase as any).from('student_arabic').select('id,student_id,arabic_level_id,assigned_teacher_id,start_date,current_progress,status,notes,arabic_full_name,arabic_levels(code,name,name_fr,education_stage),employees(first_name,last_name)').eq('school_id',schoolId).order('updated_at',{ascending:false}),
     supabase.from('arabic_sessions').select('id,student_id,session_date,activity_type,topic,score,observation,teacher_id,attendance_status,is_published,students(first_name,last_name),employees(first_name,last_name)').eq('school_id',schoolId).order('session_date',{ascending:false}).limit(30),
     supabase.from('arabic_evaluations').select('id,student_id,period_id,evaluation_date,title,skill_area,score,observation,evaluator_id,is_published,published_at,students(first_name,last_name),academic_periods(name)').eq('school_id',schoolId).order('evaluation_date',{ascending:false}).limit(30),
-    supabase.from('subjects').select('id,name,code,education_stage').eq('school_id',schoolId).eq('domain','arabe').eq('is_active',true).order('name'),
   ])
+  const options = (optionsJson ?? {}) as any
+  const students = Array.isArray(options.students) ? options.students : []
+  const periods = Array.isArray(options.periods) ? options.periods : []
+  const arabicSubjects = Array.isArray(options.subjects) ? options.subjects : []
   const activeLevels = (levels ?? []).filter((level: any) => level.is_active)
   const studentById = new Map((students ?? []).map((student: any) => [student.id, student]))
   const arabicProfiles = (profiles ?? []).map((profile: any) => ({ ...profile, students: studentById.get(profile.student_id) ?? null }))
   let teachers = normalizeStaff(staffJson)
-  let staffFallbackError: string | null = null
-  if (!teachers.length) {
-    const { data: fallbackStaff, error: fallbackError } = await supabase.from('employees')
-      .select('id,first_name,last_name,job_title').eq('school_id', schoolId).order('last_name').order('first_name')
-    teachers = fallbackStaff ?? []
-    staffFallbackError = fallbackError?.message ?? null
-  }
-  const periods = (periodsJson as any[]) ?? []
+
   const subjectLabels: Record<string, { fr: string; ar: string }> = {
     alad: { fr: 'Littérature et textes', ar: 'الأدب والنصوص' }, almo: { fr: 'Lecture', ar: 'المطالعة' },
     alfr: { fr: 'Sciences des successions', ar: 'الفرائض' }, 'an nah': { fr: 'Grammaire et morphologie arabes', ar: 'النحو والصرف' },
@@ -70,10 +65,9 @@ export default async function ArabicPage({ searchParams }: { searchParams: Promi
   return <main className="page">
     <div className="page-header"><div><p className="page-subtitle">Formation spécialisée</p><h1 className="page-title">Arabe</h1><p className="page-subtitle">Niveaux, parcours, séances, présence, évaluations et progression. Les domaines précis restent configurables.</p></div><Link className="button button-primary" href="/tahfiz-arabe/arabe/bulletins">Bulletins Arabe</Link><Link className="button button-secondary" href="/tahfiz-arabe">Retour Tahfiz / Arabe</Link></div>
     {query.error ? <p className="error">{query.error}</p> : null}
+    {optionsError ? <p className="error">Impossible de charger les listes Arabe (élèves, périodes et matières) : {optionsError.message}</p> : null}
     {staffError && !teachers.length ? <p className="error">Impossible de charger les responsables Arabe : {staffError.message}</p> : null}
-    {staffFallbackError && !teachers.length ? <p className="error">Impossible de charger la liste du personnel : {staffFallbackError}</p> : null}
     {profilesError ? <p className="error">Impossible de charger les élèves Arabe : {profilesError.message}</p> : null}
-    {arabicSubjectsError ? <p className="error">Impossible de charger les matières du domaine Arabe : {arabicSubjectsError.message}</p> : null}
     {query.created || query.updated || query.assigned || query.session || query.evaluation || query.published ? <p className="success">Opération enregistrée.</p> : null}
 
     <section className="grid grid-2">
@@ -91,7 +85,11 @@ export default async function ArabicPage({ searchParams }: { searchParams: Promi
     <section className="card" style={{marginTop:16}}><h2>Affecter / mettre à jour un élève</h2><p className="page-subtitle">La progression est calculée depuis la moyenne des notes de séances et des évaluations, rapportée au barème configuré.</p><form action={assignStudentArabic} className="grid grid-3"><div className="field" style={{gridColumn:"1 / -1"}}><label className="label">Nom complet en arabe</label><input className="input" name="arabicFullName" dir="rtl" lang="ar" maxLength={200} placeholder="Saisir le nom en arabe" required/><small>Le nom français est conservé dans le dossier élève.</small></div>
       <div className="field"><label className="label">Élève</label><select className="select" name="studentId" required><option value="">Choisir</option>{students?.map((s:any)=><option key={s.id} value={s.id}>{s.student_number} — {s.last_name} {s.first_name}</option>)}</select></div>
       <div className="field"><label className="label">Classe Arabe</label><select className="select" name="levelId"><option value="">Non défini</option>{activeLevels.map((l:any)=><option key={l.id} value={l.id}>{l.code} — {levelFrench[l.code] ? `${levelFrench[l.code]} / ` : ""}{l.name}</option>)}</select></div>
-      <div className="field"><label className="label">Responsable</label><select className="select" name="teacherId"><option value="">{teachers.length ? 'Non défini' : 'Aucun responsable actif disponible'}</option>{teachers.map((t:any)=><option key={t.id} value={t.id}>{t.last_name} {t.first_name} — {text(t.job_title)}</option>)}</select>{!teachers.length && !staffError && !staffFallbackError ? <small className="field-hint">Vérifiez qu’au moins un employé actif est enregistré dans le personnel de cet établissement.</small> : null}</div>
+      <div className="field"><label className="label">Responsable</label><select className="select" name="teacherId"><option value="">{teachers.length ? 'Non défini' : 'Aucun responsable actif disponible'}</option>{teachers.map((t:any)=><option key={t.id} value={t.id}>{t.last_name} {t.first_name} — {text(t.job_title)}</option>)}</select>{!teachers.length && !staffError ? (
+  <small className="field-hint">
+    Vérifiez qu’au moins un employé actif est enregistré dans le personnel de cet établissement.
+  </small>
+) : null}</div>
       <div className="field"><label className="label">Début</label><input className="input" name="startDate" type="date" /></div>
       <div className="field"><label className="label">Statut</label><select className="select" name="status"><option value="active">Actif</option><option value="paused">Suspendu</option><option value="completed">Terminé</option><option value="inactive">Inactif</option></select></div>
       <div className="field" style={{gridColumn:'1 / -1'}}><label className="label">Notes</label><textarea className="input" name="notes" rows={3} /></div>

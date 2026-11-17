@@ -22,6 +22,10 @@ export default async function UnpaidPage({ searchParams }: { searchParams: Promi
   const studentsById = new Map((directory.data?.students ?? []).map((student) => [student.id, student]))
   const invoiceRows = (invoices ?? []).map((invoice) => ({ ...invoice, students: studentsById.get(invoice.student_id) ?? null }))
   const chargeRows = (charges ?? []).map((charge) => ({ ...charge, students: studentsById.get(charge.student_id) ?? null }))
+  const invoiceOutstanding = (invoice: any) => Math.max(0, Number(invoice.total ?? 0) - (invoice.payment_allocations ?? []).reduce((sum: number, allocation: { amount: number }) => sum + Number(allocation.amount ?? 0), 0))
+  const chargeOutstanding = (charge: any) => Math.max(0, Number(charge.amount_due ?? 0) - (charge.payment_allocations ?? []).reduce((sum: number, allocation: { amount: number }) => sum + Number(allocation.amount ?? 0), 0))
+  const totalInvoiceOutstanding = invoiceRows.reduce((sum: number, invoice: any) => sum + invoiceOutstanding(invoice), 0)
+  const totalChargeOutstanding = chargeRows.reduce((sum: number, charge: any) => sum + chargeOutstanding(charge), 0)
 
   return (
     <main className="page">
@@ -36,17 +40,19 @@ export default async function UnpaidPage({ searchParams }: { searchParams: Promi
       {directory.error ? <p className="error">{directory.error}</p> : null}
 
       <section className="card" style={{ marginBottom: 16 }}>
+        <h2>Cumul des montants impayés</h2>
+        <p className="page-title">{money(totalInvoiceOutstanding + totalChargeOutstanding)}</p>
+        <p className="page-subtitle">Factures : {money(totalInvoiceOutstanding)} · Frais directs : {money(totalChargeOutstanding)}</p>
+      </section>
+
+      <section className="card" style={{ marginBottom: 16 }}>
         <h2>Montant des factures restant à payer</h2>
         <div className="table-wrap">
           <table>
             <thead><tr><th>Facture</th><th>Élève</th><th>Échéance</th><th>Reste à payer</th><th>Statut</th></tr></thead>
             <tbody>
               {invoiceRows.map((invoice: any) => {
-                const paid = (invoice.payment_allocations ?? []).reduce(
-                  (sum: number, allocation: { amount: number }) => sum + Number(allocation.amount ?? 0),
-                  0,
-                )
-                const remaining = Math.max(0, Number(invoice.total ?? 0) - paid)
+                const remaining = invoiceOutstanding(invoice)
 
                 return (
                   <tr key={invoice.id}>
@@ -71,11 +77,7 @@ export default async function UnpaidPage({ searchParams }: { searchParams: Promi
             <thead><tr><th>Élève</th><th>Frais</th><th>Échéance</th><th>Reste à payer</th><th>Statut</th></tr></thead>
             <tbody>
               {chargeRows.map((charge: any) => {
-                const paid = (charge.payment_allocations ?? []).reduce(
-                  (sum: number, allocation: { amount: number }) => sum + Number(allocation.amount ?? 0),
-                  0,
-                )
-                const remaining = Math.max(0, Number(charge.amount_due ?? 0) - paid)
+                const remaining = chargeOutstanding(charge)
 
                 return (
                   <tr key={charge.id}>

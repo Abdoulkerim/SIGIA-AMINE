@@ -87,6 +87,7 @@ button, input, select, textarea { font: inherit; }
 .wushu-report-footer > div:last-child { font-size: 20px; }
 @page { size: A4 portrait; margin: 12mm; }
 @media print {
+  @page { size: A4 portrait; margin: 12mm; }
   body { background: #fff !important; }
   body * { visibility: hidden !important; }
   .arabic-report-sheet, .arabic-report-sheet *, .wushu-report-sheet, .wushu-report-sheet * { visibility: visible !important; }
@@ -403,6 +404,23 @@ tr:last-child td { border-bottom: 0; }
 .receipt-signatures { display: flex; justify-content: space-between; margin: 64px 12px 24px; }
 .receipt-signatures span { min-width: 190px; padding-top: 10px; border-top: 1px solid #8391a7; text-align: center; }
 .receipt-footer { margin-top: 24px; color: #52647f; text-align: center; }
+.receipt-paper { width: min(100%, 820px); overflow-wrap: anywhere; }
+.receipt-paper section { margin-top: 24px; }
+.receipt-paper .table-wrap, .receipt-paper table { width: 100%; }
+.receipt-paper table { border-collapse: collapse; }
+.receipt-paper th, .receipt-paper td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+.receipt-paper tfoot th { border-top: 2px solid #14233d; border-bottom: 0; }
+.receipt-balance { display: flex; justify-content: space-between; gap: 16px; margin-top: 24px; padding: 16px; border: 1px solid #137b70; border-radius: 8px; background: #f0fdfa; }
+.receipt-balance span { font-weight: 800; white-space: nowrap; }
+.receipt-paper p { overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .receipt-paper { padding: 20px !important; }
+  .receipt-heading { flex-wrap: wrap; }
+  .receipt-paper .receipt-meta { grid-template-columns: 1fr; }
+  .receipt-signatures { flex-direction: column; gap: 40px; }
+  .receipt-signatures span { min-width: 0; }
+  .receipt-balance { flex-direction: column; }
+}
 @media print {
   body { background: #fff !important; }
   .app-shell { display: block !important; }
@@ -411,4 +429,5 @@ tr:last-child td { border-bottom: 0; }
   .page.print-surface { max-width: none !important; margin: 0 !important; padding: 0 !important; }
   .receipt-paper { max-width: none !important; border: 0 !important; box-shadow: none !important; padding: 12mm !important; }
   .receipt-paper .table-wrap { overflow: visible !important; }
+  .receipt-paper, .receipt-paper section, .receipt-paper table, .receipt-paper tr { break-inside: avoid; page-break-inside: avoid; }
 }

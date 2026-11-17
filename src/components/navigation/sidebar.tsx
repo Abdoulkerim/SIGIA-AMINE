@@ -286,7 +286,7 @@ const routePermissions: Array<{ prefix: string; anyOf: string[] }> = [
   { prefix: '/activites/agriculture', anyOf: ['agriculture.manage', 'agriculture.view'] },
   { prefix: '/activites/elevage', anyOf: ['livestock.manage', 'livestock.view'] },
   { prefix: '/activites', anyOf: ['agriculture.manage', 'agriculture.view', 'livestock.manage', 'livestock.view'] },
-  { prefix: '/tahfiz-arabe/tahfiz', anyOf: ['tahfiz.manage', 'tahfiz.view'] },
+  { prefix: '/tahfiz-arabe/tahfiz', anyOf: ['tahfiz.manage', 'tahfiz.view', 'arabic.manage', 'arabic.view'] },
   { prefix: '/tahfiz-arabe/arabe', anyOf: ['arabic.manage', 'arabic.view'] },
   { prefix: '/tahfiz-arabe', anyOf: ['tahfiz.manage', 'tahfiz.view', 'arabic.manage', 'arabic.view'] },
   { prefix: '/wushu', anyOf: ['wushu.manage', 'wushu.view', 'wushu.publish'] },

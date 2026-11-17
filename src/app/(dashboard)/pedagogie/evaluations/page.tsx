@@ -10,11 +10,22 @@ export default async function AssessmentsPage({ searchParams }: { searchParams: 
   if (!context?.profile.school_id) return null
   const params = await searchParams
   const supabase = await createClient()
-  const { data: assessments, error } = await supabase
-    .from('assessments')
-    .select('id,title,assessment_date,max_score,is_published,school_years(name),academic_periods(name),classes(name,code),subjects(name,code),employees(first_name,last_name),assessment_types(name)')
-    .eq('school_id', context.profile.school_id)
-    .order('assessment_date', { ascending: false })
+  const isTeacher = context.roles.some((role) => role.code === 'teacher')
+  let assessments: any[] = []
+  let error: { message: string } | null = null
+  if (isTeacher) {
+    const result = await supabase.rpc('get_teacher_assessments_for_grading')
+    assessments = (result.data as any[]) ?? []
+    error = result.error
+  } else {
+    const result = await supabase
+      .from('assessments')
+      .select('id,title,assessment_date,max_score,is_published,school_years(name),academic_periods(name),classes(name,code),subjects(name,code),employees(first_name,last_name),assessment_types(name)')
+      .eq('school_id', context.profile.school_id)
+      .order('assessment_date', { ascending: false })
+    assessments = result.data ?? []
+    error = result.error
+  }
   return (
     <main className="page">
       <div className="page-header"><div><h1 className="page-title">Évaluations</h1><p className="page-subtitle">Création, saisie des notes et publication des évaluations.</p></div><Link className="button button-primary" href="/pedagogie/evaluations/nouveau">+ Nouvelle évaluation</Link></div>
@@ -22,7 +33,7 @@ export default async function AssessmentsPage({ searchParams }: { searchParams: 
       {params.updated ? <p className="success">Évaluation modifiée.</p> : null}{params.deleted ? <p className="success">Évaluation supprimée avec ses notes.</p> : null}
       <ReportActions title="Liste des évaluations" fileName="liste-evaluations" headers={['Date', 'Évaluation', 'Classe', 'Matière', 'Enseignant', 'Période', 'Barème', 'Statut']} rows={(assessments ?? []).map((a: any) => [a.assessment_date, a.title, a.classes?.name, a.subjects?.name, a.employees ? `${a.employees.last_name} ${a.employees.first_name}` : '—', a.academic_periods?.name, a.max_score, a.is_published ? 'Publiée' : 'Brouillon'])} />
       <section className="card"><div className="table-wrap"><table><thead><tr><th>Date</th><th>Évaluation</th><th>Classe</th><th>Matière</th><th>Enseignant</th><th>Période</th><th>Barème</th><th>Statut</th><th></th></tr></thead><tbody>
-        {(assessments ?? []).map((a: any) => <tr key={a.id}><td>{a.assessment_date}</td><td>{a.title}<div style={{fontSize:12,color:'var(--muted)'}}>{a.assessment_types?.name ?? 'Type non défini'}</div></td><td>{a.classes?.name ?? '—'}</td><td>{a.subjects?.name ?? '—'}</td><td>{a.employees ? `${a.employees.last_name} ${a.employees.first_name}` : '—'}</td><td>{a.academic_periods?.name ?? '—'}</td><td>{a.max_score}</td><td><span className="badge">{a.is_published ? 'Publiée' : 'Brouillon'}</span></td><td style={{display:'flex',gap:8}}><Link className="button button-secondary" href={`/pedagogie/evaluations/${a.id}/notes`}>Notes</Link><Link className="button button-secondary" href={`/pedagogie/evaluations/${a.id}/modifier`}>Modifier</Link><DeleteAssessmentForm id={a.id} title={a.title} />{!a.is_published ? <form action={publishAssessment}><input type="hidden" name="id" value={a.id} /><button className="button button-primary" type="submit">Publier</button></form> : null}</td></tr>)}
+        {(assessments ?? []).map((a: any) => <tr key={a.id}><td>{a.assessment_date}</td><td>{a.title}<div style={{fontSize:12,color:'var(--muted)'}}>{a.assessment_types?.name ?? 'Type non défini'}</div></td><td>{a.classes?.name ?? '—'}</td><td>{a.subjects?.name ?? '—'}</td><td>{a.employees ? `${a.employees.last_name} ${a.employees.first_name}` : '—'}</td><td>{a.academic_periods?.name ?? '—'}</td><td>{a.max_score}</td><td><span className="badge">{a.is_published ? 'Publiée' : 'Brouillon'}</span></td><td style={{display:'flex',gap:8}}><Link className="button button-secondary" href={`/pedagogie/evaluations/${a.id}/notes`}>Saisir les notes</Link>{!isTeacher ? <><Link className="button button-secondary" href={`/pedagogie/evaluations/${a.id}/modifier`}>Modifier</Link><DeleteAssessmentForm id={a.id} title={a.title} />{!a.is_published ? <form action={publishAssessment}><input type="hidden" name="id" value={a.id} /><button className="button button-primary" type="submit">Publier</button></form> : null}</> : null}</td></tr>)}
       </tbody></table></div>{!assessments?.length ? <p className="empty">Aucune évaluation.</p> : null}</section>
     </main>
   )

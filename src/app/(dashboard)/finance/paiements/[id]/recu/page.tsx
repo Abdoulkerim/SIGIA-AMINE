@@ -20,6 +20,12 @@ export default async function StudentReceiptPage({ params }: { params: Promise<{
   const { data: school } = await supabase.from('schools').select('name,address,phone,email').eq('id', payment.school_id).maybeSingle()
   const student = directory.data?.students.find((item) => item.id === payment.student_id) ?? null
   const parent = directory.data?.parents.find((item) => item.id === payment.parent_id) ?? null
+  const [{ data: invoices }, { data: charges }] = payment.student_id ? await Promise.all([
+    supabase.from('invoices').select('total,payment_allocations(amount)').eq('student_id', payment.student_id).neq('status', 'cancelled'),
+    supabase.from('student_charges').select('amount_due,payment_allocations(amount)').eq('student_id', payment.student_id).neq('status', 'cancelled'),
+  ]) : [{ data: [] }, { data: [] }]
+  const unpaidInvoices = (invoices ?? []).reduce((sum: number, invoice: any) => sum + Math.max(0, Number(invoice.total ?? 0) - (invoice.payment_allocations ?? []).reduce((paid: number, allocation: { amount: number }) => paid + Number(allocation.amount ?? 0), 0)), 0)
+  const unpaidCharges = (charges ?? []).reduce((sum: number, charge: any) => sum + Math.max(0, Number(charge.amount_due ?? 0) - (charge.payment_allocations ?? []).reduce((paid: number, allocation: { amount: number }) => paid + Number(allocation.amount ?? 0), 0)), 0)
   return <main className="page print-surface">
     <div className="page-header no-print"><div><h1 className="page-title">Reçu de paiement</h1><p className="page-subtitle">Reçu de l’élève à imprimer ou enregistrer en PDF.</p></div><div className="actions"><Link className="button button-secondary" href="/finance/paiements">Retour aux paiements</Link><PrintButton label="Imprimer le reçu"/></div></div>
     <article className="card receipt-paper">
@@ -33,6 +39,7 @@ export default async function StudentReceiptPage({ params }: { params: Promise<{
         const fee = Array.isArray(charge?.fee_types) ? charge.fee_types[0] : charge?.fee_types
         return <tr key={index}><td>{invoice?.invoice_number ? `Facture ${invoice.invoice_number}` : fee?.name ?? charge?.description ?? 'Frais scolaire'}</td><td>{money(allocation.amount)}</td></tr>
       })}</tbody><tfoot><tr><th>Total reçu</th><th>{money(payment.amount)}</th></tr></tfoot></table></div></section>
+      <section className="receipt-balance"><strong>Montant restant à payer par l’élève :</strong><span>{money(unpaidInvoices + unpaidCharges)}</span></section>
       <p><strong>Référence :</strong> {payment.reference ?? '—'}</p>
       <div className="receipt-signatures"><span>Signature du caissier</span><span>Cachet de l’établissement</span></div>
       <p className="receipt-footer">Ce reçu atteste de l’encaissement du montant indiqué ci-dessus.</p>

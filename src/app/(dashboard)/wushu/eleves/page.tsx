@@ -3,22 +3,25 @@ import { assignStudentWushu } from '../wushu-actions'
 import { ProgressBar } from '@/components/administration/progress-bar'
 import { StudentFilterSelect } from '@/components/students/student-filter-select'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
-import { getCurrentClassFilters } from '@/lib/students/current-class-filters'
 
 export default async function WushuStudentsPage({ searchParams }: { searchParams: Promise<{ error?: string; assigned?: string }> }) {
   const q = await searchParams
   const supabase = await createClient()
   const context = await getCurrentUserContext()
   const schoolId = context?.profile.school_id
-  const { classes, enrollments } = schoolId ? await getCurrentClassFilters(supabase, schoolId) : { classes: [], enrollments: [] }
-  const [{ data: students }, { data: groups }, { data: profiles }] = await Promise.all([
-    supabase.from('students').select('id,student_number,first_name,last_name').eq('school_id',schoolId ?? '').eq('status','active').order('last_name').limit(1000),
-    supabase.from('wushu_groups').select('id,name,level').eq('is_active',true).order('name'),
-    supabase.from('student_wushu').select('id,student_id,group_id,current_grade,current_progress,start_date,status,updated_at').eq('school_id',schoolId ?? '').order('updated_at',{ascending:false}).limit(500),
-  ])
+  const { data: directory, error: directoryError } = schoolId
+    ? await supabase.rpc('get_wushu_student_directory')
+    : { data: null, error: null }
+  const options = (directory ?? {}) as any
+  const students = Array.isArray(options.students) ? options.students : []
+  const classes = Array.isArray(options.classes) ? options.classes : []
+  const enrollments = Array.isArray(options.enrollments) ? options.enrollments : []
+  const groups = Array.isArray(options.groups) ? options.groups : []
+  const profiles = Array.isArray(options.profiles) ? options.profiles : []
+  const activeGroups = groups.filter((group: any) => group.is_active)
   return <main className="page"><div className="page-header"><div><h1 className="page-title">Élèves Wushu</h1><p className="page-subtitle">Affectation, grade courant, statut et progression.</p></div></div>
-    {q.error ? <p className="error">{q.error}</p> : null}{q.assigned ? <p className="success">Profil Wushu enregistré.</p> : null}
-    <section className="card"><h2>Affecter / mettre à jour</h2><p className="page-subtitle">La progression se calcule automatiquement à partir des évaluations et de la présence aux entraînements (70 % / 30 % si les deux sont renseignés).</p><form action={assignStudentWushu} className="grid grid-4"><StudentFilterSelect students={(students ?? []) as any[]} classes={classes} enrollments={enrollments} /><div className="field"><label className="label">Groupe *</label><select className="select" name="groupId" required><option value="">Choisir…</option>{groups?.map(g => <option key={g.id} value={g.id}>{g.name}{g.level ? ` · ${g.level}` : ''}</option>)}</select></div><div className="field"><label className="label">Grade actuel</label><input className="input" name="currentGrade" placeholder="Paramétrable" /></div><div className="field"><label className="label">Début</label><input className="input" type="date" name="startDate" /></div><div className="field"><label className="label">Statut</label><select className="select" name="status"><option value="active">Actif</option><option value="paused">En pause</option><option value="completed">Terminé</option><option value="inactive">Inactif</option></select></div><div className="field" style={{gridColumn:'span 2'}}><label className="label">Notes</label><input className="input" name="notes" /></div><div><button className="button button-primary" type="submit">Enregistrer</button></div></form></section>
-    <section className="card" style={{marginTop:16}}><h2>Profils Wushu</h2>{profiles?.length ? <div className="table-wrap"><table><thead><tr><th>Élève</th><th>Groupe</th><th>Grade</th><th>Progression</th><th>Statut</th></tr></thead><tbody>{profiles.map(p => { const s=students?.find(x=>x.id===p.student_id); const g=groups?.find(x=>x.id===p.group_id); return <tr key={p.id}><td>{s ? `${s.last_name} ${s.first_name}` : p.student_id}</td><td>{g?.name || '—'}</td><td>{p.current_grade || '—'}</td><td><ProgressBar value={p.current_progress} /></td><td><span className="badge">{p.status}</span></td></tr> })}</tbody></table></div> : <p className="empty">Aucun profil Wushu.</p>}</section>
+    {q.error ? <p className="error">{q.error}</p> : null}{directoryError ? <p className="error">Impossible de charger les élèves et classes Wushu : {directoryError.message}</p> : null}{q.assigned ? <p className="success">Profil Wushu enregistré.</p> : null}
+    <section className="card"><h2>Affecter / mettre à jour</h2><p className="page-subtitle">Filtrez les élèves par cycle et par classe, de la maternelle au secondaire.</p><p className="page-subtitle">La progression se calcule automatiquement à partir des évaluations et de la présence aux entraînements (70 % / 30 % si les deux sont renseignés).</p><form action={assignStudentWushu} className="grid grid-4"><StudentFilterSelect students={students as any[]} classes={classes} enrollments={enrollments} /><div className="field"><label className="label">Groupe *</label><select className="select" name="groupId" required><option value="">Choisir…</option>{activeGroups.map((g:any) => <option key={g.id} value={g.id}>{g.name}{g.level ? ` · ${g.level}` : ''}</option>)}</select></div><div className="field"><label className="label">Grade actuel</label><input className="input" name="currentGrade" placeholder="Paramétrable" /></div><div className="field"><label className="label">Début</label><input className="input" type="date" name="startDate" /></div><div className="field"><label className="label">Statut</label><select className="select" name="status"><option value="active">Actif</option><option value="paused">En pause</option><option value="completed">Terminé</option><option value="inactive">Inactif</option></select></div><div className="field" style={{gridColumn:'span 2'}}><label className="label">Notes</label><input className="input" name="notes" /></div><div><button className="button button-primary" type="submit">Enregistrer</button></div></form></section>
+    <section className="card" style={{marginTop:16}}><h2>Profils Wushu</h2>{profiles.length ? <div className="table-wrap"><table><thead><tr><th>Élève</th><th>Groupe</th><th>Grade</th><th>Progression</th><th>Statut</th></tr></thead><tbody>{profiles.map((p:any) => { const s=students.find((x:any)=>x.id===p.student_id); const g=groups.find((x:any)=>x.id===p.group_id); return <tr key={p.id}><td>{s ? `${s.last_name} ${s.first_name}` : p.student_id}</td><td>{g?.name || '—'}</td><td>{p.current_grade || '—'}</td><td><ProgressBar value={p.current_progress} /></td><td><span className="badge">{p.status}</span></td></tr> })}</tbody></table></div> : <p className="empty">Aucun profil Wushu.</p>}</section>
   </main>
 }

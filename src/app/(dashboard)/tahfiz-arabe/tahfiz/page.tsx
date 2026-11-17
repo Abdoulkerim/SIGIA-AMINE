@@ -4,7 +4,6 @@ import { getCurrentUserContext } from '@/lib/auth/current-user'
 import { createTahfizLevel, updateTahfizLevel, assignStudentTahfiz, recordTahfizSession, publishTahfizSession } from '../tahfiz-arabe-actions'
 import { ProgressBar } from '@/components/administration/progress-bar'
 import { StudentFilterSelect } from '@/components/students/student-filter-select'
-import { getCurrentClassFilters } from '@/lib/students/current-class-filters'
 
 const statusLabels: Record<string,string> = { active:'Actif', paused:'Suspendu', completed:'Terminé', inactive:'Inactif' }
 const attendanceLabels: Record<string,string> = { present:'Présent', absent:'Absent', late:'Retard', excused:'Excusé' }
@@ -17,20 +16,28 @@ export default async function TahfizPage({ searchParams }: { searchParams: Promi
   if (!context?.profile.school_id) return null
   const supabase = await createClient()
   const schoolId = context.profile.school_id
-  const { classes, enrollments } = await getCurrentClassFilters(supabase, schoolId)
-  const [{ data: levels }, { data: students }, { data: staffJson }, { data: surahs }, { data: profiles }, { data: sessions }] = await Promise.all([
+  const [{ data: levels }, { data: optionsJson, error: optionsError }, { data: staffJson, error: staffError }, { data: surahs }, { data: profiles }, { data: sessions }] = await Promise.all([
     supabase.from('tahfiz_levels').select('id,code,name,sequence_no,is_active,description').eq('school_id', schoolId).order('sequence_no').order('name'),
-    supabase.from('students').select('id,student_number,first_name,last_name').eq('school_id', schoolId).order('last_name').order('first_name').limit(500),
+    supabase.rpc('get_specialized_form_options', { p_module: 'tahfiz' }),
     supabase.rpc('get_specialized_staff', { p_module: 'tahfiz' }),
     supabase.from('quran_surahs').select('id,name_ar,name_fr,surah_number').order('surah_number'),
-    supabase.from('student_tahfiz').select('id,student_id,tahfiz_level_id,assigned_teacher_id,start_date,current_progress,status,notes,students(first_name,last_name,student_number),tahfiz_levels(name),employees(first_name,last_name)').eq('school_id', schoolId).order('updated_at', { ascending:false }).limit(100),
-    supabase.from('tahfiz_sessions').select('id,student_id,session_date,session_type,surah_id,from_verse,to_verse,score,observation,teacher_id,attendance_status,is_published,students(first_name,last_name),quran_surahs(name_fr,name_ar),employees(first_name,last_name)').eq('school_id', schoolId).order('session_date',{ascending:false}).limit(30),
+    supabase.from('student_tahfiz').select('id,student_id,tahfiz_level_id,assigned_teacher_id,start_date,current_progress,status,notes,tahfiz_levels(name),employees(first_name,last_name)').eq('school_id', schoolId).order('updated_at', { ascending:false }).limit(100),
+    supabase.from('tahfiz_sessions').select('id,student_id,session_date,session_type,surah_id,from_verse,to_verse,score,observation,teacher_id,attendance_status,is_published,quran_surahs(name_fr,name_ar),employees(first_name,last_name)').eq('school_id', schoolId).order('session_date',{ascending:false}).limit(30),
   ])
+  const options = (optionsJson ?? {}) as any
+  const students = Array.isArray(options.students) ? options.students : []
+  const classes = Array.isArray(options.classes) ? options.classes : []
+  const enrollments = Array.isArray(options.enrollments) ? options.enrollments : []
+  const studentById = new Map(students.map((student: any) => [student.id, student]))
+  const tahfizProfiles = (profiles ?? []).map((profile: any) => ({ ...profile, students: studentById.get(profile.student_id) ?? null }))
+  const tahfizSessions = (sessions ?? []).map((session: any) => ({ ...session, students: studentById.get(session.student_id) ?? null }))
   const activeLevels = (levels ?? []).filter((level: any) => level.is_active)
   const teachers = (staffJson as any[]) ?? []
   return <main className="page">
     <div className="page-header"><div><p className="page-subtitle">Formation spécialisée</p><h1 className="page-title">Tahfiz</h1><p className="page-subtitle">Niveaux, mémorisation, révisions, récitations, évaluations et progression.</p></div><Link className="button button-primary" href="/tahfiz-arabe/tahfiz/bulletins">Bulletins Tahfiz</Link><Link className="button button-secondary" href="/tahfiz-arabe">Retour Tahfiz / Arabe</Link></div>
     {query.error ? <p className="error">{query.error}</p> : null}
+    {optionsError ? <p className="error">Impossible de charger les listes Tahfiz (élèves et classes) : {optionsError.message}</p> : null}
+    {staffError ? <p className="error">Impossible de charger la liste des responsables Tahfiz : {staffError.message}</p> : null}
     {query.created || query.updated || query.assigned || query.session || query.published ? <p className="success">Opération enregistrée.</p> : null}
 
     <section className="grid grid-2">
@@ -55,10 +62,10 @@ export default async function TahfizPage({ searchParams }: { searchParams: Promi
       <button className="button button-primary" type="submit">Enregistrer le profil</button>
     </form></section>
 
-    <section className="card" style={{marginTop:16}}><h2>Profils Tahfiz</h2>{profiles?.length ? <div className="table-wrap"><table><thead><tr><th>Élève</th><th>Niveau</th><th>Responsable</th><th>Progression</th><th>Statut</th></tr></thead><tbody>{profiles.map((p:any)=><tr key={p.id}><td>{p.students?.last_name} {p.students?.first_name}</td><td>{text(p.tahfiz_levels?.name)}</td><td>{text(p.employees ? `${p.employees.last_name} ${p.employees.first_name}` : null)}</td><td><ProgressBar value={p.current_progress} /></td><td><span className="badge">{statusLabels[p.status] || p.status}</span></td></tr>)}</tbody></table></div> : <p className="empty">Aucun profil Tahfiz.</p>}</section>
+    <section className="card" style={{marginTop:16}}><h2>Profils Tahfiz</h2>{tahfizProfiles.length ? <div className="table-wrap"><table><thead><tr><th>Élève</th><th>Niveau</th><th>Responsable</th><th>Progression</th><th>Statut</th></tr></thead><tbody>{tahfizProfiles.map((p:any)=><tr key={p.id}><td>{p.students?.last_name} {p.students?.first_name}</td><td>{text(p.tahfiz_levels?.name)}</td><td>{text(p.employees ? `${p.employees.last_name} ${p.employees.first_name}` : null)}</td><td><ProgressBar value={p.current_progress} /></td><td><span className="badge">{statusLabels[p.status] || p.status}</span></td></tr>)}</tbody></table></div> : <p className="empty">Aucun profil Tahfiz.</p>}</section>
 
     <section className="card" style={{marginTop:16}}><h2>Enregistrer une séance</h2><form action={recordTahfizSession} className="grid grid-3">
-      <StudentFilterSelect students={(students ?? []).filter((student:any) => (profiles ?? []).some((profile:any) => profile.student_id === student.id)) as any[]} classes={classes} enrollments={enrollments} />
+      <StudentFilterSelect students={students.filter((student:any) => tahfizProfiles.some((profile:any) => profile.student_id === student.id)) as any[]} classes={classes} enrollments={enrollments} />
       <div className="field"><label className="label">Date</label><input className="input" name="sessionDate" type="date" required /></div>
       <div className="field"><label className="label">Type</label><select className="select" name="sessionType" required>{Object.entries(sessionLabels).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></div>
       <div className="field"><label className="label">Sourate</label><select className="select" name="surahId"><option value="">Aucune</option>{surahs?.map((s:any)=><option key={s.id} value={s.id}>{s.surah_number}. {s.name_fr} — {s.name_ar}</option>)}</select></div>
@@ -73,6 +80,6 @@ export default async function TahfizPage({ searchParams }: { searchParams: Promi
       <button className="button button-primary" type="submit">Enregistrer la séance</button>
     </form></section>
 
-    <section className="card" style={{marginTop:16}}><h2>Dernières séances</h2>{sessions?.length ? <div className="table-wrap"><table><thead><tr><th>Date</th><th>Élève</th><th>Type</th><th>Sourate</th><th>Présence</th><th>Score</th><th>Publication</th><th></th></tr></thead><tbody>{sessions.map((s:any)=><tr key={s.id}><td>{s.session_date}</td><td>{s.students?.last_name} {s.students?.first_name}</td><td>{sessionLabels[s.session_type] || s.session_type}</td><td>{text(s.quran_surahs ? `${s.quran_surahs.name_fr} ${s.from_verse ? `(${s.from_verse}-${s.to_verse})` : ''}` : null)}</td><td>{attendanceLabels[s.attendance_status] || s.attendance_status}</td><td>{text(s.score)}</td><td>{s.is_published ? 'Publié' : 'Brouillon'}</td><td>{!s.is_published ? <form action={publishTahfizSession}><input type="hidden" name="sessionId" value={s.id}/><button className="button button-secondary" type="submit">Publier</button></form> : null}</td></tr>)}</tbody></table></div> : <p className="empty">Aucune séance.</p>}</section>
+    <section className="card" style={{marginTop:16}}><h2>Dernières séances</h2>{tahfizSessions.length ? <div className="table-wrap"><table><thead><tr><th>Date</th><th>Élève</th><th>Type</th><th>Sourate</th><th>Présence</th><th>Score</th><th>Publication</th><th></th></tr></thead><tbody>{tahfizSessions.map((s:any)=><tr key={s.id}><td>{s.session_date}</td><td>{s.students?.last_name} {s.students?.first_name}</td><td>{sessionLabels[s.session_type] || s.session_type}</td><td>{text(s.quran_surahs ? `${s.quran_surahs.name_fr} ${s.from_verse ? `(${s.from_verse}-${s.to_verse})` : ''}` : null)}</td><td>{attendanceLabels[s.attendance_status] || s.attendance_status}</td><td>{text(s.score)}</td><td>{s.is_published ? 'Publié' : 'Brouillon'}</td><td>{!s.is_published ? <form action={publishTahfizSession}><input type="hidden" name="sessionId" value={s.id}/><button className="button button-secondary" type="submit">Publier</button></form> : null}</td></tr>)}</tbody></table></div> : <p className="empty">Aucune séance.</p>}</section>
   </main>
 }

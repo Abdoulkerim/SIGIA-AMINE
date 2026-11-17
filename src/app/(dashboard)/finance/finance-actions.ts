@@ -174,19 +174,29 @@ export async function recordPayment(formData: FormData) {
 
 export async function updatePaymentDetails(formData: FormData) {
   const id = uuid.safeParse(formData.get('paymentId'))
+  const amount = money.safeParse(formData.get('amount'))
   const paymentDateInput = z.string().min(1).safeParse(formData.get('paymentDate'))
   const parsedMethod = method.safeParse(formData.get('method'))
   const reference = z.string().trim().max(120).optional().safeParse(formData.get('reference') || undefined)
   const notes = z.string().trim().max(500).optional().safeParse(formData.get('notes') || undefined)
   const parsedDate = paymentDateInput.success ? new Date(paymentDateInput.data) : null
-  if (!id.success || !parsedMethod.success || !reference.success || !notes.success || !parsedDate || Number.isNaN(parsedDate.getTime())) redirect(errUrl('/finance/paiements', 'Vérifiez les informations du paiement.'))
+  if (!id.success || !amount.success || !parsedMethod.success || !reference.success || !notes.success || !parsedDate || Number.isNaN(parsedDate.getTime())) redirect(errUrl(id.success ? `/finance/paiements/${id.data}/modifier` : '/finance/paiements', 'Vérifiez les informations du paiement.'))
   const { supabase } = await currentSchoolId()
   const { error } = await (supabase as any).rpc('update_payment_details', {
-    p_payment_id: id.data, p_payment_date: parsedDate.toISOString(), p_method: parsedMethod.data,
+    p_payment_id: id.data, p_amount: amount.data, p_payment_date: parsedDate.toISOString(), p_method: parsedMethod.data,
     p_reference: reference.data ?? null, p_notes: notes.data ?? null,
   })
-  if (error) redirect(errUrl(`/finance/paiements/${id.data}/modifier`, error.message))
-  revalidatePath('/finance/paiements'); revalidatePath(`/finance/paiements/${id.data}/modifier`); revalidatePath(`/finance/paiements/${id.data}/recu`); revalidatePath('/finance/caisse')
+  if (error) {
+    const message = error.message.includes('OVERALLOCATED')
+      ? 'Le montant corrigé dépasse le solde restant de la facture ou des frais.'
+      : error.message.includes('PAYMENT_AMOUNT_EDIT_REQUIRES_SINGLE_ALLOCATION')
+        ? 'Le montant ne peut être corrigé que pour un paiement affecté à une seule facture ou à un seul frais.'
+        : error.message.includes('PAYMENT_LOCKED_BY_CASH_CLOSING')
+          ? 'Ce paiement est lié à une caisse clôturée et ne peut plus être modifié.'
+          : error.message
+    redirect(errUrl(`/finance/paiements/${id.data}/modifier`, message))
+  }
+  revalidatePath('/finance/paiements'); revalidatePath(`/finance/paiements/${id.data}/modifier`); revalidatePath(`/finance/paiements/${id.data}/recu`); revalidatePath('/finance/caisse'); revalidatePath('/finance/impayes'); revalidatePath('/finance')
   redirect(`/finance/paiements/${id.data}/modifier?updated=1`)
 }
 
