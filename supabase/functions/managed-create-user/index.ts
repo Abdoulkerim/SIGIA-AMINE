@@ -1,7 +1,7 @@
 import { withSupabase } from 'npm:@supabase/server@1'
 
 const allowedStages = new Set(['maternelle', 'primaire', 'secondaire', 'formation', 'autre', 'parent'])
-const allowedCreators = new Set(['it_admin', 'super_admin'])
+const allowedCreators = new Set(['it_admin', 'super_admin', 'founder'])
 const protectedRoles = new Set(['super_admin', 'founder', 'it_admin'])
 
 function jsonError(message: string, status: number) {
@@ -17,6 +17,24 @@ export default {
       input = await request.json()
     } catch {
       return jsonError('RequÃªte invalide.', 400)
+    }
+
+    if (input.action === 'schools') {
+      const requesterId = ctx.userClaims?.id
+      if (!requesterId) return jsonError('Session invalide. Reconnectez-vous.', 401)
+      const { data: requester, error: requesterError } = await ctx.supabaseAdmin
+        .from('users').select('status').eq('id', requesterId).maybeSingle()
+      if (requesterError) return jsonError('Impossible de vérifier le profil administrateur.', 500)
+      if (requester?.status !== 'active') return jsonError('Accès refusé.', 403)
+      const { data: requesterRoles, error: requesterRolesError } = await ctx.supabaseAdmin
+        .from('user_roles').select('roles(code)').eq('user_id', requesterId).eq('is_active', true)
+      if (requesterRolesError) return jsonError('Impossible de vérifier les droits administrateur.', 500)
+      const roleCodes = (requesterRoles ?? []).map((assignment: any) => assignment.roles?.code as string | undefined)
+      if (!roleCodes.some((code) => allowedCreators.has(code ?? ''))) return jsonError('Accès refusé.', 403)
+      const { data: schools, error: schoolsError } = await ctx.supabaseAdmin
+        .from('schools').select('id,name,is_active').eq('is_active', true).order('name')
+      if (schoolsError) return jsonError('Impossible de charger la liste des écoles.', 500)
+      return Response.json({ schools: schools ?? [] })
     }
 
     const firstName = typeof input.firstName === 'string' ? input.firstName.trim() : ''
@@ -50,7 +68,7 @@ export default {
       .from('user_roles').select('roles(code)').eq('user_id', userId).eq('is_active', true)
     if (assignmentsError) return jsonError('Impossible de vÃ©rifier les droits administrateur.', 500)
     const creatorRoles = (assignments ?? []).map((assignment: any) => assignment.roles?.code as string | undefined)
-    const isSystemAdmin = creatorRoles.includes('super_admin')
+    const isSystemAdmin = creatorRoles.includes('super_admin') || creatorRoles.includes('founder')
     if (!creatorRoles.some((code) => allowedCreators.has(code ?? ''))) return jsonError('Seul un Administrateur informatique ou système peut créer des comptes.', 403)
 
     const { data: school, error: schoolError } = await ctx.supabaseAdmin.from('schools').select('id,is_active').eq('id', schoolId).maybeSingle()

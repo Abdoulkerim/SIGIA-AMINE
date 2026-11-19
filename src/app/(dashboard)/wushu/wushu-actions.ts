@@ -89,6 +89,46 @@ export async function createWushuSession(formData: FormData) {
   redirect('/wushu/entrainements?created=1')
 }
 
+export async function updateWushuSession(formData: FormData) {
+  const sessionId = uuid.safeParse(formData.get('sessionId'))
+  const groupId = uuid.safeParse(formData.get('groupId'))
+  const sessionDate = date.safeParse(formData.get('sessionDate'))
+  const type = z.enum(['training','technique','exam_preparation','competition_preparation','other']).safeParse(formData.get('sessionType'))
+  const topic = z.string().trim().max(300).optional().safeParse(formData.get('topic') || undefined)
+  const coach = uuid.optional().safeParse(formData.get('coachEmployeeId') || undefined)
+  const notes = z.string().trim().max(2000).optional().safeParse(formData.get('notes') || undefined)
+  if (![sessionId,groupId,sessionDate,type,topic,coach,notes].every(value => value.success)) fail('/wushu/entrainements', 'Vérifiez les informations de la séance Wushu.')
+
+  const supabase = await createClient()
+  const { error } = await (supabase as any).rpc('update_wushu_session', {
+    p_session_id: sessionId.data,
+    p_group_id: groupId.data,
+    p_session_date: sessionDate.data,
+    p_session_type: type.data,
+    p_topic: topic.data ?? null,
+    p_coach_employee_id: coach.data ?? null,
+    p_notes: notes.data ?? null,
+  })
+  if (error) fail('/wushu/entrainements', error.message)
+  revalidatePath('/wushu')
+  revalidatePath('/wushu/entrainements')
+  revalidatePath('/wushu/presences')
+  redirect('/wushu/entrainements?updated=1')
+}
+
+export async function deleteWushuSession(formData: FormData) {
+  const sessionId = uuid.safeParse(formData.get('sessionId'))
+  if (!sessionId.success) fail('/wushu/entrainements', 'Séance Wushu invalide.')
+
+  const supabase = await createClient()
+  const { error } = await (supabase as any).rpc('delete_wushu_session', { p_session_id: sessionId.data })
+  if (error) fail('/wushu/entrainements', error.message)
+  revalidatePath('/wushu')
+  revalidatePath('/wushu/entrainements')
+  revalidatePath('/wushu/presences')
+  redirect('/wushu/entrainements?deleted=1')
+}
+
 export async function recordWushuAttendance(formData: FormData) {
   const sessionId = uuid.safeParse(formData.get('sessionId'))
   const studentId = uuid.safeParse(formData.get('studentId'))

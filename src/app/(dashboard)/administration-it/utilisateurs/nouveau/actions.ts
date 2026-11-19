@@ -36,12 +36,12 @@ export async function createManagedUser(formData: FormData) {
   }
 
   const context = await getCurrentUserContext()
-  const isSystemAdmin = context?.roles.some(({ code }) => code === 'super_admin') ?? false
-  if (!context?.roles.some(({ code }) => code === 'it_admin' || code === 'super_admin')) redirect(formUrl('Seul un Administrateur informatique ou système peut créer des comptes.'))
+  const canAssignPrivilegedRoles = context?.roles.some(({ code }) => code === 'super_admin' || code === 'founder') ?? false
+  if (!context?.roles.some(({ code }) => ['it_admin', 'super_admin', 'founder'].includes(code ?? ''))) redirect(formUrl('Seul un Administrateur informatique, un Super administrateur ou le Fondateur peut créer des comptes.'))
   const supabase = await createClient()
   const { data: selectedRole } = await supabase.from('roles').select('code').eq('id', parsed.data.roleId).maybeSingle()
-  if (!selectedRole || (!isSystemAdmin && ['super_admin', 'founder', 'it_admin'].includes(selectedRole.code))) {
-    redirect(formUrl(isSystemAdmin ? 'Le rôle choisi est introuvable.' : 'Seul un Administrateur système peut attribuer un rôle d’administration.'))
+  if (!selectedRole || (!canAssignPrivilegedRoles && ['super_admin', 'founder', 'it_admin'].includes(selectedRole.code))) {
+    redirect(formUrl(canAssignPrivilegedRoles ? 'Le rôle choisi est introuvable.' : 'Seuls le Fondateur et le Super administrateur peuvent attribuer un rôle d’administration.'))
   }
 
   const { error } = await supabase.functions.invoke('managed-create-user', { body: parsed.data })
@@ -59,5 +59,8 @@ export async function createManagedUser(formData: FormData) {
   revalidatePath('/administration-it/utilisateurs')
   revalidatePath('/administration-it/acces')
   revalidatePath('/administration-it')
+  const isFounderOnly = context?.roles.some(({ code }) => code === 'founder')
+    && !context?.roles.some(({ code }) => code === 'super_admin' || code === 'it_admin')
+  if (isFounderOnly) redirect('/administration-it/utilisateurs/nouveau?created=1')
   redirect(`/administration-it/utilisateurs?schoolId=${parsed.data.schoolId}&created=1`)
 }

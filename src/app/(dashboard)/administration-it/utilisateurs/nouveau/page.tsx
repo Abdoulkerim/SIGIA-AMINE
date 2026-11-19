@@ -7,20 +7,27 @@ import { InitialPasswordField } from './password-field'
 
 const stages = [['maternelle','Maternelle'],['primaire','Primaire'],['secondaire','Secondaire'],['formation','Centre de formation'],['autre','Autre'],['parent','Parent — enfants rattachés uniquement']]
 
-export default async function NewITUserPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function NewITUserPage({ searchParams }: { searchParams: Promise<{ error?: string; created?: string }> }) {
   const context = await getCurrentUserContext()
-  const isSystemAdmin = context?.roles.some(({ code }) => code === 'super_admin') ?? false
-  if (!context?.roles.some(({ code }) => code === 'it_admin' || code === 'super_admin')) redirect('/dashboard')
+  const canAssignPrivilegedRoles = context?.roles.some(({ code }) => code === 'super_admin' || code === 'founder') ?? false
+  const isFounderOnly = context?.roles.some(({ code }) => code === 'founder')
+    && !context?.roles.some(({ code }) => code === 'super_admin' || code === 'it_admin')
+  if (!context?.roles.some(({ code }) => ['it_admin', 'super_admin', 'founder'].includes(code ?? ''))) redirect('/dashboard')
   const supabase = await createClient()
-  const [{ data: roles }, { data: directory, error: directoryError }, params] = await Promise.all([
+  const [{ data: roles }, directoryResult, params] = await Promise.all([
     supabase.from('roles').select('id,name,code').order('name'),
-    supabase.functions.invoke('managed-user-directory', { body: { action: 'list' } }),
+    isFounderOnly
+      ? supabase.functions.invoke('managed-create-user', { body: { action: 'schools' } })
+      : supabase.functions.invoke('managed-user-directory', { body: { action: 'list' } }),
     searchParams,
   ])
+  const directory = directoryResult.data
+  const directoryError = directoryResult.error
   const schools = (directory?.schools ?? []).filter((school: { is_active: boolean }) => school.is_active)
-  const assignableRoles = (roles ?? []).filter((role) => isSystemAdmin || !['super_admin', 'founder', 'it_admin'].includes(role.code))
+  const assignableRoles = (roles ?? []).filter((role) => canAssignPrivilegedRoles || !['super_admin', 'founder', 'it_admin'].includes(role.code))
   return <main className="page">
-    <div className="page-header"><div><h1 className="page-title">Créer un compte utilisateur</h1><p className="page-subtitle">Définissez l’identité, l’école, le cycle de données et le rôle.</p></div><Link className="button button-secondary" href="/administration-it/utilisateurs">Retour aux utilisateurs</Link></div>
+    <div className="page-header"><div><h1 className="page-title">Créer un compte utilisateur</h1><p className="page-subtitle">Définissez l’identité, l’école, le cycle de données et le rôle.</p></div><Link className="button button-secondary" href={isFounderOnly ? '/administration-it' : '/administration-it/utilisateurs'}>{isFounderOnly ? 'Retour à l’administration' : 'Retour aux utilisateurs'}</Link></div>
+    {params.created ? <p className="success" role="status">Le compte a été créé et son rôle attribué.</p> : null}
     {params.error ? <p className="error">{params.error}</p> : null}
     {directoryError ? <p className="error">Impossible de charger les écoles. Vérifiez le déploiement de la fonction managed-user-directory.</p> : null}
     <section className="card" style={{maxWidth:760}}><form action={createManagedUser} className="grid grid-2">
@@ -31,7 +38,7 @@ export default async function NewITUserPage({ searchParams }: { searchParams: Pr
       <div className="field"><label className="label" htmlFor="password">Mot de passe initial</label><InitialPasswordField/><small>Au moins 10 caractères. Transmettez-le au nouvel utilisateur par un canal sûr.</small></div>
       <div className="field"><label className="label" htmlFor="schoolId">École</label><select className="select" id="schoolId" name="schoolId" required defaultValue={schools.length === 1 ? schools[0].id : ''}><option value="" disabled>Choisir une école</option>{schools.map((school: {id:string;name:string})=><option key={school.id} value={school.id}>{school.name}</option>)}</select></div>
       <div className="field"><label className="label" htmlFor="educationStage">Cycle / périmètre des données</label><select className="select" id="educationStage" name="educationStage" required defaultValue=""><option value="" disabled>Choisir un cycle</option>{stages.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></div>
-      <div className="field"><label className="label" htmlFor="roleId">Rôle et permissions</label><select className="select" id="roleId" name="roleId" required defaultValue=""><option value="" disabled>Choisir un rôle</option>{assignableRoles.map((role)=><option key={role.id} value={role.id}>{role.name} ({role.code})</option>)}</select><small>{isSystemAdmin ? 'Les rôles Fondateur et Super administrateur donnent accès à tous les privilèges globaux.' : 'Les rôles Fondateur, Super administrateur et Administrateur informatique sont réservés.'}</small></div>
+      <div className="field"><label className="label" htmlFor="roleId">Rôle et permissions</label><select className="select" id="roleId" name="roleId" required defaultValue=""><option value="" disabled>Choisir un rôle</option>{assignableRoles.map((role)=><option key={role.id} value={role.id}>{role.name} ({role.code})</option>)}</select><small>{canAssignPrivilegedRoles ? 'Les rôles Fondateur et Super administrateur sont disponibles pour les responsables autorisés.' : 'Les rôles Fondateur, Super administrateur et Administrateur informatique sont réservés au Fondateur et au Super administrateur.'}</small></div>
       <button className="button button-primary" style={{gridColumn:'1/-1'}} disabled={!schools.length || !assignableRoles.length}>Créer le compte et attribuer le rôle</button>
     </form></section>
   </main>

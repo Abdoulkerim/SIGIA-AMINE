@@ -51,14 +51,16 @@ export default async function NewAssessmentPage({ searchParams }: { searchParams
     (assignment.school_id === null || assignment.school_id === schoolId)
     && (assignment.roles?.role_permissions ?? []).some((item: any) => ['settings.manage', 'assessments.manage'].includes(item.permissions?.code)),
   )
+  const isTeacher = context.roles.some(role => role.code === 'teacher')
   return (
     <main className="page">
       <div className="page-header"><div><h1 className="page-title">Nouvelle évaluation</h1><p className="page-subtitle">Le serveur vérifiera la cohérence année/période/classe/matière/enseignant.</p></div><Link className="button button-secondary" href="/pedagogie/evaluations">Retour</Link></div>
       {params.error ? <p className="error">{params.error}</p> : null}
       {params.periodCreated ? <p className="success">La période a été créée.</p> : null}
       {loadErrors.length ? <p className="error">Certaines listes d’évaluation n’ont pas pu être chargées : {loadErrors.join(' • ')}</p> : null}
+      {isTeacher && !teacherProfile ? <section className="card"><p className="error">Votre compte n’est pas encore relié à votre profil enseignant. Un administrateur doit associer votre compte à votre fiche enseignant avant que vous puissiez créer une évaluation ou saisir des notes.</p><Link className="button button-secondary" href="/pedagogie/evaluations">Retour aux évaluations</Link></section> : null}
       <p className="field-hint">Le coefficient dépend du couple matière / classe. Configurez-le sur la fiche de la matière, dans « Rattacher la matière à une classe et une année », avant de créer l’évaluation. <Link href="/pedagogie/matieres">Ouvrir les matières</Link></p>
-      <section className="card">
+      {isTeacher && !teacherProfile ? null : <section className="card">
         <form action={createAssessment}>
           <div className="grid grid-2">
             <AssessmentFields years={years ?? []} periods={periods ?? []} classes={classes ?? []} subjects={subjects ?? []} teachers={teachers ?? []} assignments={assignments ?? []} initialYearId={currentYear?.id ?? ''} teacherProfile={teacherProfile} />
@@ -69,7 +71,7 @@ export default async function NewAssessmentPage({ searchParams }: { searchParams
           </div>
           <button className="button button-primary" type="submit">Créer l’évaluation</button>
         </form>
-      </section>
+      </section>}
       {canManagePeriods ? <section className="card" style={{ marginTop: 16 }}>
         <h2 style={{ marginTop: 0 }}>Créer une autre période</h2>
         <p className="page-subtitle">Ajoutez une période avec son nom, son code et ses dates pour l’année scolaire choisie.</p>

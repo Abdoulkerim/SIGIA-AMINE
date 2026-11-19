@@ -312,7 +312,11 @@ const routePermissions: Array<{ prefix: string; anyOf: string[] }> = [
 ]
 
 function itemIsAllowed(href: string, permissionCodes: Set<string>, canAccessIT: boolean) {
+  if (href === '/administration-it/utilisateurs/nouveau') return canAccessIT || permissionCodes.has('users.manage')
   if (href.startsWith('/administration-it/utilisateurs')) return canAccessIT
+  if (href === '/administration-it/cartes' || href.startsWith('/administration-it/cartes/eleves')) {
+    return canAccessIT || permissionCodes.has('students.view') || permissionCodes.has('students.manage')
+  }
   if (href.startsWith('/administration-it') && !canAccessIT) return false
   const rule = routePermissions.find(({ prefix }) => href === prefix || href.startsWith(`${prefix}/`))
   if (!rule) return false

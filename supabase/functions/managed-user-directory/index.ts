@@ -146,6 +146,35 @@ export default {
     if (!target) return errorResponse('Compte introuvable dans cette école.', 404)
     if (target.id === callerId) return errorResponse('Vous ne pouvez pas supprimer ou modifier votre propre compte.', 403)
 
+    if (action === 'teacher-profiles') {
+      const { data: roles, error: rolesError } = await ctx.supabaseAdmin.from('user_roles')
+        .select('roles(code)').eq('user_id', userId).eq('school_id', schoolId).eq('is_active', true)
+      if (rolesError) return errorResponse('Impossible de vérifier le rôle du compte.', 500)
+      if (!(roles ?? []).some((row: any) => row.roles?.code === 'teacher')) return errorResponse('Ce compte ne possède pas le rôle enseignant dans cette école.', 403)
+      const { data: employees, error } = await ctx.supabaseAdmin.from('employees')
+        .select('id,first_name,last_name,employee_number,user_id,teacher_profiles!inner(employee_id)')
+        .eq('school_id', schoolId).eq('status', 'active').order('last_name').order('first_name')
+      if (error) return errorResponse('Impossible de charger les profils enseignants.', 500)
+      return Response.json({ profiles: (employees ?? []).filter((employee: any) => !employee.user_id || employee.user_id === userId) })
+    }
+
+    if (action === 'link-teacher-profile') {
+      const employeeId = typeof body.employeeId === 'string' ? body.employeeId : ''
+      if (!uuid.test(employeeId)) return errorResponse('Profil enseignant invalide.', 400)
+      const { data: roles, error: rolesError } = await ctx.supabaseAdmin.from('user_roles')
+        .select('roles(code)').eq('user_id', userId).eq('school_id', schoolId).eq('is_active', true)
+      if (rolesError) return errorResponse('Impossible de vérifier le rôle du compte.', 500)
+      if (!(roles ?? []).some((row: any) => row.roles?.code === 'teacher')) return errorResponse('Ce compte ne possède pas le rôle enseignant dans cette école.', 403)
+      const { data: employee, error: employeeError } = await ctx.supabaseAdmin.from('employees')
+        .select('id,user_id,teacher_profiles!inner(employee_id)').eq('id', employeeId).eq('school_id', schoolId).eq('status', 'active').maybeSingle()
+      if (employeeError) return errorResponse('Impossible de vérifier le profil enseignant.', 500)
+      if (!employee) return errorResponse('Profil enseignant introuvable dans cette école.', 404)
+      if (employee.user_id && employee.user_id !== userId) return errorResponse('Ce profil est déjà relié à un autre compte.', 409)
+      const { error } = await ctx.supabaseAdmin.from('employees').update({ user_id: userId }).eq('id', employeeId).eq('school_id', schoolId)
+      if (error) return errorResponse(`Impossible de relier le profil : ${error.message}`, 400)
+      return Response.json({ linked: true })
+    }
+
     const selectedStage = typeof body.educationStage === 'string' ? body.educationStage : ''
     if (!stages.has(selectedStage) || (target.education_stage ?? 'parent') !== selectedStage) {
       return errorResponse('Le cycle du compte a changé. Actualisez la liste avant de recommencer.', 409)
