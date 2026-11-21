@@ -26,25 +26,34 @@ export async function getAiMessages(conversationId: string) {
 }
 
 export async function sendAiMessage(conversationId: string | null, message: string, mode: string = 'assistant') {
-  const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.access_token) throw new Error('Session introuvable.')
-  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  if (!baseUrl) throw new Error('NEXT_PUBLIC_SUPABASE_URL est manquante.')
+  try {
+    const supabase = await createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) return { ok: false as const, error: 'Session expiree. Reconnectez-vous puis reessayez.' }
+    const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    if (!baseUrl) return { ok: false as const, error: 'Configuration Supabase manquante pour joindre le service IA.' }
 
-  const response = await fetch(`${baseUrl}/functions/v1/ai-assistant`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      apikey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '',
-      'Content-Type': 'application/json',
-    },
-    cache: 'no-store',
-    body: JSON.stringify({ conversation_id: conversationId, message, mode }),
-  })
-  const payload = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(payload.message || payload.error || 'La requête IA a échoué.')
-  return payload as { conversation_id: string; message: { id: string; role: 'assistant'; content: string; created_at: string }; run_id: string }
+    const response = await fetch(baseUrl + '/functions/v1/ai-assistant', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + session.access_token,
+        apikey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '',
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store',
+      body: JSON.stringify({ conversation_id: conversationId, message, mode }),
+    })
+    const payload = await response.json().catch(() => ({}))
+    if (response.status === 404) {
+      return { ok: false as const, error: 'Le service IA n est pas deploye sur Supabase. Contactez l administrateur pour publier la fonction ai-assistant.' }
+    }
+    if (!response.ok) {
+      return { ok: false as const, error: payload.message || payload.error || 'La requete IA a echoue. Reessayez plus tard.' }
+    }
+    return { ok: true as const, payload: payload as { conversation_id: string; message: { id: string; role: 'assistant'; content: string; created_at: string }; run_id: string } }
+  } catch {
+    return { ok: false as const, error: 'Impossible de joindre le service IA. Verifiez votre connexion puis reessayez.' }
+  }
 }
 
 export async function reviewAiAlert(id: string, status: 'acknowledged' | 'resolved' | 'dismissed', reviewNote?: string) {

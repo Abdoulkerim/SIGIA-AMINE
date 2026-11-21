@@ -23,6 +23,9 @@ export default async function ManageUserAccountPage({ params, searchParams }: { 
   const isTeacher = (roleRows ?? []).some((row: any) => row.roles?.code === 'teacher')
   const directory = directoryResult.data
   const directoryError = directoryResult.error
+  const linkedProfile = Array.isArray(directory?.profiles)
+    ? directory.profiles.find((profile: any) => profile.user_id === user.id)
+    : null
 
   return <main className="page user-account-page">
     <div className="page-header user-account-header">
@@ -36,11 +39,14 @@ export default async function ManageUserAccountPage({ params, searchParams }: { 
     {isTeacher ? <section className="card user-account-card">
       <div className="user-section-heading"><span className="user-section-icon" aria-hidden="true">↔</span><div><h2>Profil enseignant</h2><p>Reliez ce compte à la fiche correspondante pour donner accès aux classes, matières et évaluations affectées.</p></div></div>
       {directoryError ? <p className="error user-notice" role="alert">Impossible de charger les profils enseignants. {directoryError.message}</p>
-        : Array.isArray(directory?.profiles) && directory.profiles.length ? <form action={linkTeacherProfile} className="user-link-form">
+      : Array.isArray(directory?.profiles) && directory.profiles.length ? <>
+        {linkedProfile ? <div className="user-linked-profile" role="status"><strong>Profil actuellement relié</strong><span>{linkedProfile.last_name} {linkedProfile.first_name} · N° {linkedProfile.employee_number ?? '—'}</span><small>Pour corriger une erreur, choisissez la bonne fiche ci-dessous. Le lien actuel sera remplacé.</small></div> : null}
+        <form action={linkTeacherProfile} className="user-link-form">
           <input type="hidden" name="userId" value={user.id}/><input type="hidden" name="schoolId" value={user.school_id ?? ''}/>
-          <label className="field"><span className="label">Fiche enseignant correspondante</span><select className="select" name="employeeId" required defaultValue=""><option value="">Sélectionner une fiche</option>{directory.profiles.map((employee: any) => <option key={employee.id} value={employee.id}>{employee.last_name} {employee.first_name} · N° {employee.employee_number ?? '—'}</option>)}</select><small>Vérifiez le nom et le numéro avant de confirmer la liaison.</small></label>
-          <button className="button button-primary">Lier le compte au profil</button>
+          <label className="field"><span className="label">{linkedProfile ? 'Modifier le profil lié' : 'Fiche enseignant correspondante'}</span><select className="select" name="employeeId" required defaultValue={linkedProfile?.id ?? ''}><option value="" disabled>Sélectionner une fiche</option>{directory.profiles.map((employee: any) => <option key={employee.id} value={employee.id}>{employee.last_name} {employee.first_name} · N° {employee.employee_number ?? '—'}{employee.id === linkedProfile?.id ? ' (actuellement lié)' : ''}</option>)}</select><small>Vérifiez le nom et le numéro. Le remplacement transfère l’accès à la nouvelle fiche.</small></label>
+          <button className="button button-primary">{linkedProfile ? 'Remplacer le profil lié' : 'Lier le compte au profil'}</button>
         </form>
+      </>
         : <div className="user-empty-profiles"><strong>Aucune fiche disponible</strong><p>{Array.isArray(directory?.profiles) ? 'Aucun profil enseignant actif et libre n’a été trouvé dans cette école.' : 'Vérifiez que ce compte possède le rôle enseignant et réessayez.'}</p></div>}
     </section> : <section className="card user-account-card user-role-hint"><strong>Ce compte n’a pas le rôle Enseignant.</strong><p>Attribuez d’abord le rôle enseignant dans « Rôles et permissions » pour pouvoir lui associer une fiche.</p><Link className="button button-secondary" href={`/administration-it/acces?userId=${user.id}`}>Gérer les rôles</Link></section>}
 

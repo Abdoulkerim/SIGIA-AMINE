@@ -62,7 +62,7 @@ export async function createTeacher(formData: FormData) {
   const { data, error } = await supabase.rpc('create_teacher', {
     p_employee_number: parsed.data.employeeNumber,
     p_first_name: parsed.data.firstName,
-    p_last_name: parsed.data.lastName,
+    p_last_name: parsed.data.lastName.toLocaleUpperCase('fr-FR'),
     p_gender: parsed.data.gender ?? null,
     p_date_of_birth: parsed.data.dateOfBirth || null,
     p_place_of_birth: parsed.data.placeOfBirth || null,
@@ -109,7 +109,7 @@ export async function updateTeacher(formData: FormData) {
     p_teacher_id: parsed.data.id,
     p_employee_number: parsed.data.employeeNumber,
     p_first_name: parsed.data.firstName,
-    p_last_name: parsed.data.lastName,
+    p_last_name: parsed.data.lastName.toLocaleUpperCase('fr-FR'),
     p_gender: parsed.data.gender ?? null,
     p_date_of_birth: parsed.data.dateOfBirth || null,
     p_place_of_birth: parsed.data.placeOfBirth || null,

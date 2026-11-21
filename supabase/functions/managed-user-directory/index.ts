@@ -170,7 +170,14 @@ export default {
       if (employeeError) return errorResponse('Impossible de vérifier le profil enseignant.', 500)
       if (!employee) return errorResponse('Profil enseignant introuvable dans cette école.', 404)
       if (employee.user_id && employee.user_id !== userId) return errorResponse('Ce profil est déjà relié à un autre compte.', 409)
-      const { error } = await ctx.supabaseAdmin.from('employees').update({ user_id: userId }).eq('id', employeeId).eq('school_id', schoolId)
+      // Use the validated RPC for both new links and corrections. A direct
+      // UPDATE fires the education-stage trigger even when the link is unchanged.
+      const { error } = await ctx.supabaseAdmin.rpc('set_teacher_profile_link', {
+        p_actor_user_id: callerId,
+        p_user_id: userId,
+        p_school_id: schoolId,
+        p_employee_id: employeeId,
+      })
       if (error) return errorResponse(`Impossible de relier le profil : ${error.message}`, 400)
       return Response.json({ linked: true })
     }

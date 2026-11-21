@@ -12,8 +12,8 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
     supabase.from('employees')
       .select('id,employee_number,first_name,last_name,job_title,department,phone,status,hire_date,teacher_profiles(speciality)')
       .eq('school_id', context.profile.school_id)
-      .order('last_name')
-      .order('first_name'),
+      .order('last_name', { ascending: true })
+      .order('first_name', { ascending: true }),
     supabase.from('user_roles')
       .select('school_id,roles(role_permissions(permissions(code)))')
       .eq('user_id', context.profile.id)
@@ -44,7 +44,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
                 : employee.teacher_profiles
               return <tr key={employee.id}>
               <td>{employee.employee_number}</td>
-              <td>{employee.last_name} {employee.first_name}</td>
+              <td>{employee.last_name?.toLocaleUpperCase('fr-FR')} {employee.first_name}</td>
               <td>{employee.job_title ?? '—'}{teacherProfile?.speciality ? <div className="page-subtitle">Enseignant · {teacherProfile.speciality}</div> : null}</td>
               <td>{employee.department ?? '—'}</td>
               <td>{employee.hire_date ?? '—'}</td>

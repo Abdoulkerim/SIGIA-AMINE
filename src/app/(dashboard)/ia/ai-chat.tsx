@@ -44,9 +44,10 @@ export default function AiChat({ initialConversations }: { initialConversations:
     startTransition(async () => {
       try {
         const result = await sendAiMessage(activeId, message, mode)
-        if (!activeId) setActiveId(result.conversation_id)
-        setMessages((current) => [...current, { id: `user-${Date.now()}`, role: 'user', content: message, created_at: new Date().toISOString() }, result.message])
-        if (!activeId) setConversations((current) => [{ id: result.conversation_id, title: message.slice(0,80), mode, status: 'active', updated_at: new Date().toISOString(), model: null }, ...current])
+        if (!result.ok) { setError(result.error); return }
+        if (!activeId) setActiveId(result.payload.conversation_id)
+        setMessages((current) => [...current, { id: `user-${Date.now()}`, role: 'user', content: message, created_at: new Date().toISOString() }, result.payload.message])
+        if (!activeId) setConversations((current) => [{ id: result.payload.conversation_id, title: message.slice(0,80), mode, status: 'active', updated_at: new Date().toISOString(), model: null }, ...current])
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Erreur IA.')
       }

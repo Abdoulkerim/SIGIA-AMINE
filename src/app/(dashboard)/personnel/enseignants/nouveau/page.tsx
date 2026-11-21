@@ -15,8 +15,8 @@ export default function NewTeacherPage() {
       <section className="card">
         <form action={createTeacher} className="grid grid-2">
           <div className="field"><label className="label" htmlFor="employeeNumber">N° employé *</label><input className="input" id="employeeNumber" name="employeeNumber" required /></div>
+          <div className="field"><label className="label" htmlFor="lastName">Nom *</label><input className="input" id="lastName" name="lastName" required autoCapitalize="characters" style={{ textTransform: 'uppercase' }} /></div>
           <div className="field"><label className="label" htmlFor="firstName">Prénom *</label><input className="input" id="firstName" name="firstName" required /></div>
-          <div className="field"><label className="label" htmlFor="lastName">Nom *</label><input className="input" id="lastName" name="lastName" required /></div>
           <div className="field"><label className="label" htmlFor="gender">Genre</label>
             <select className="select" id="gender" name="gender"><option value="">Non renseigné</option><option value="male">Masculin</option><option value="female">Féminin</option><option value="other">Autre</option></select>
           </div>

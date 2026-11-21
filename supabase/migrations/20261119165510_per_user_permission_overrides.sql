@@ -127,3 +127,5 @@ revoke all on function app.has_permission(text, uuid) from public, anon;
 grant execute on function app.has_permission(text, uuid) to authenticated;
 
 commit;
+
+NOTIFY pgrst, 'reload schema';

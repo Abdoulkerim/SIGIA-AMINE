@@ -32,12 +32,28 @@ export async function createEmployee(formData: FormData) {
   const phone = z.string().trim().max(50).optional().safeParse(formData.get('phone') || undefined)
   const email = z.string().trim().email().max(255).optional().safeParse(formData.get('email') || undefined)
   const address = z.string().trim().max(500).optional().safeParse(formData.get('address') || undefined)
-  if (![employeeNumber, firstName, lastName, jobTitle, department, qualification, hireDate, gender, dob, place, phone, email, address].every((x) => x.success)) fail('/personnel/employes/nouveau', 'Données employé invalides.')
+  if (
+  !employeeNumber.success ||
+  !firstName.success ||
+  !lastName.success ||
+  !jobTitle.success ||
+  !department.success ||
+  !qualification.success ||
+  !hireDate.success ||
+  !gender.success ||
+  !dob.success ||
+  !place.success ||
+  !phone.success ||
+  !email.success ||
+  !address.success
+) {
+  fail('/personnel/employes/nouveau', 'Données employé invalides.')
+}
   const supabase = await client()
   const { data, error } = await supabase.rpc('create_employee', {
     p_employee_number: employeeNumber.data,
     p_first_name: firstName.data,
-    p_last_name: lastName.data,
+    p_last_name: lastName.data.toLocaleUpperCase('fr-FR'),
     p_job_title: jobTitle.data ?? null,
     p_department: department.data ?? null,
     p_qualification: qualification.data ?? null,
@@ -105,7 +121,7 @@ export async function updateEmployee(formData: FormData) {
     p_employee_id: input.employeeId,
     p_employee_number: input.employeeNumber,
     p_first_name: input.firstName,
-    p_last_name: input.lastName,
+    p_last_name: input.lastName.toLocaleUpperCase('fr-FR'),
     p_job_title: input.jobTitle ?? null,
     p_department: input.department ?? null,
     p_qualification: input.qualification ?? null,

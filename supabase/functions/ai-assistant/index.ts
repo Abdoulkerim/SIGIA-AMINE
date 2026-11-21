@@ -1,4 +1,4 @@
-import { createSupabaseContext } from "@supabase/server"
+import { createSupabaseContext } from "npm:@supabase/server@1"
 
 const OPENAI_URL = "https://api.openai.com/v1/responses"
 const MAX_TOOL_ROUNDS = 4

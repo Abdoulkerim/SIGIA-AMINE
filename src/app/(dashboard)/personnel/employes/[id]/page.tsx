@@ -43,7 +43,7 @@ export default async function EmployeeDetailPage({
     <main className="page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">{employee.last_name} {employee.first_name}</h1>
+          <h1 className="page-title">{employee.last_name?.toLocaleUpperCase('fr-FR')} {employee.first_name}</h1>
           <p className="page-subtitle">{employee.employee_number} • {employee.job_title ?? 'Fonction non renseignée'} • {employee.department ?? 'Service non renseigné'}</p>
         </div>
         <div className="actions">
@@ -63,8 +63,8 @@ export default async function EmployeeDetailPage({
             <input type="hidden" name="employeeId" value={id} />
             <div className="field"><label className="label" htmlFor="employeeNumber">N° employé *</label><input className="input" id="employeeNumber" name="employeeNumber" defaultValue={employee.employee_number ?? ''} required maxLength={50} /></div>
             <div className="field"><label className="label" htmlFor="jobTitle">Fonction</label><input className="input" id="jobTitle" name="jobTitle" defaultValue={employee.job_title ?? ''} maxLength={160} /></div>
+            <div className="field"><label className="label" htmlFor="lastName">Nom *</label><input className="input" id="lastName" name="lastName" defaultValue={employee.last_name ?? ''} required maxLength={120} autoCapitalize="characters" style={{ textTransform: 'uppercase' }} /></div>
             <div className="field"><label className="label" htmlFor="firstName">Prénom *</label><input className="input" id="firstName" name="firstName" defaultValue={employee.first_name ?? ''} required maxLength={120} /></div>
-            <div className="field"><label className="label" htmlFor="lastName">Nom *</label><input className="input" id="lastName" name="lastName" defaultValue={employee.last_name ?? ''} required maxLength={120} /></div>
             <div className="field"><label className="label" htmlFor="department">Service</label><input className="input" id="department" name="department" defaultValue={employee.department ?? ''} maxLength={160} /></div>
             <div className="field"><label className="label" htmlFor="qualification">Qualification</label><input className="input" id="qualification" name="qualification" defaultValue={employee.qualification ?? ''} maxLength={255} /></div>
             <div className="field" style={{ gridColumn: '1 / -1' }}>

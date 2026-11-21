@@ -24,6 +24,12 @@ function arabicStudentLabel(profile: any) {
   const frenchName = `${profile.students?.last_name ?? ''} ${profile.students?.first_name ?? ''}`.trim()
   return profile.arabic_full_name ? `${frenchName} (${profile.arabic_full_name})` : frenchName
 }
+function arabicTeacherLabel(profile: any, teachers: any[]) {
+  const assignedTeacher = teachers.find((teacher) => teacher.id === profile.assigned_teacher_id)
+  const relatedTeacher = Array.isArray(profile.employees) ? profile.employees[0] : profile.employees
+  const teacher = assignedTeacher ?? relatedTeacher
+  return teacher ? `${teacher.last_name} ${teacher.first_name}`.trim() : null
+}
 
 export default async function ArabicPage({ searchParams }: { searchParams: Promise<{ error?: string; created?: string; updated?: string; assigned?: string; session?: string; evaluation?: string; published?: string }> }) {
   const query = await searchParams
@@ -97,7 +103,7 @@ export default async function ArabicPage({ searchParams }: { searchParams: Promi
     </form></section>
 
         <section className="card" style={{marginTop:16}}><h2>Profils Arabe</h2>{arabicProfiles.length ? <div className="table-wrap"><table><thead><tr><th>Élève (français)</th><th>Nom écrit en arabe</th><th>Classe Arabe / المستوى</th><th>Responsable</th><th>Progression</th><th>Statut</th><th>Modification</th></tr></thead><tbody>{arabicProfiles.map((p:any)=><tr key={p.id}>
-        <td>{p.students?.last_name} {p.students?.first_name}</td><td dir="rtl" lang="ar">{text(p.arabic_full_name)}</td><td dir="rtl" lang="ar">{text(p.arabic_levels?.name)}{p.arabic_levels?.name_fr || levelFrench[p.arabic_levels?.code ?? ""] ? <small className="field-hint">{p.arabic_levels?.name_fr || levelFrench[p.arabic_levels?.code]}</small> : null}</td><td>{text(p.employees ? `${p.employees.last_name} ${p.employees.first_name}` : null)}</td><td><ProgressBar value={p.current_progress} /></td><td><span className="badge">{statuses[p.status] || p.status}</span></td>
+        <td>{p.students?.last_name} {p.students?.first_name}</td><td dir="rtl" lang="ar">{text(p.arabic_full_name)}</td><td dir="rtl" lang="ar">{text(p.arabic_levels?.name)}{p.arabic_levels?.name_fr || levelFrench[p.arabic_levels?.code ?? ""] ? <small className="field-hint">{p.arabic_levels?.name_fr || levelFrench[p.arabic_levels?.code]}</small> : null}</td><td>{text(arabicTeacherLabel(p, teachers))}</td><td><ProgressBar value={p.current_progress} /></td><td><span className="badge">{statuses[p.status] || p.status}</span></td>
       <td><details><summary>Modifier le profil</summary><form action={assignStudentArabic} className="grid" style={{minWidth:280,marginTop:8}}>
         <input type="hidden" name="studentId" value={p.student_id}/>
         <label className="field"><span className="label">Nom en français</span><input className="input" name="lastName" required maxLength={120} defaultValue={p.students?.last_name ?? ''}/></label>
