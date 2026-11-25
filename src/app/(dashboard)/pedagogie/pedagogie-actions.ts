@@ -102,8 +102,7 @@ const assessmentSchema = z.object({
   classId: uuid,
   subjectId: uuid,
   teacherId: uuid,
-  assessmentTypeId: uuid.optional(),
-  title: z.string().trim().min(1).max(200),
+  assessmentTypeId: uuid,
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   maxScore: z.coerce.number().positive(),
 })
@@ -116,8 +115,7 @@ export async function createAssessment(formData: FormData) {
     classId: formData.get('classId'),
     subjectId: formData.get('subjectId'),
     teacherId: formData.get('teacherId'),
-    assessmentTypeId: typeRaw ? typeRaw : undefined,
-    title: formData.get('title'),
+    assessmentTypeId: typeRaw || undefined,
     date: formData.get('date'),
     maxScore: formData.get('maxScore'),
   })
@@ -134,8 +132,8 @@ export async function createAssessment(formData: FormData) {
     p_class_id: parsed.data.classId,
     p_subject_id: parsed.data.subjectId,
     p_teacher_id: linkedTeacher.data?.id ?? parsed.data.teacherId,
-    p_assessment_type_id: parsed.data.assessmentTypeId ?? null,
-    p_title: parsed.data.title,
+    p_assessment_type_id: parsed.data.assessmentTypeId,
+    p_title: 'Évaluation',
     p_assessment_date: parsed.data.date,
     p_max_score: parsed.data.maxScore,
   })
@@ -156,8 +154,7 @@ export async function updateAssessment(formData: FormData) {
     classId: formData.get('classId'),
     subjectId: formData.get('subjectId'),
     teacherId: formData.get('teacherId'),
-    assessmentTypeId: typeRaw ? typeRaw : undefined,
-    title: formData.get('title'),
+    assessmentTypeId: typeRaw || undefined,
     date: formData.get('date'),
     maxScore: formData.get('maxScore'),
   })
@@ -180,8 +177,7 @@ export async function updateAssessment(formData: FormData) {
     class_id: parsed.data.classId,
     subject_id: parsed.data.subjectId,
     teacher_id: parsed.data.teacherId,
-    assessment_type_id: parsed.data.assessmentTypeId ?? null,
-    title: parsed.data.title,
+    assessment_type_id: parsed.data.assessmentTypeId,
     assessment_date: parsed.data.date,
     max_score: parsed.data.maxScore,
   }).eq('id', parsed.data.id).eq('school_id', schoolId).select('id').maybeSingle()

@@ -2,12 +2,13 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
 import { ReportActions } from '@/components/reports/report-actions'
+import { deleteStudent } from './actions'
 
 function genderLabel(gender: string | null | undefined) {
   return gender === 'male' ? 'Masculin' : gender === 'female' ? 'Féminin' : gender === 'other' ? 'Autre' : '—'
 }
 
-export default async function StudentsPage({ searchParams }: { searchParams: Promise<{ created?: string; classAssigned?: string; classId?: string }> }) {
+export default async function StudentsPage({ searchParams }: { searchParams: Promise<{ created?: string; classAssigned?: string; classId?: string; deleted?: string; error?: string }> }) {
   const context = await getCurrentUserContext()
   if (!context?.profile.school_id) return null
 
@@ -39,6 +40,8 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
 
       {params.created ? <p className="success">Élève enregistré avec succès.</p> : null}
       {params.classAssigned ? <p className="success">L’élève a aussi été inscrit dans la classe choisie.</p> : null}
+      {params.deleted ? <p className="success">Élève supprimé définitivement.</p> : null}
+      {params.error ? <p className="error">{params.error}</p> : null}
       {error ? <p className="error">Erreur de lecture : {error.message}</p> : null}
 
       <section className="card" style={{ marginBottom: 16 }}>
@@ -83,7 +86,18 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
                   <td>{student.date_of_birth ?? '—'}</td>
                   <td>{student.residence_type}</td>
                   <td><span className="badge">{student.status}</span></td>
-                  <td><Link className="button button-secondary" href={`/administration/eleves/${student.id}`}>Ouvrir</Link></td>
+                  <td className="actions">
+                    <Link className="button button-secondary" href={`/administration/eleves/${student.id}`}>Ouvrir</Link>
+                    <details className="user-delete">
+                      <summary>Supprimer</summary>
+                      <form action={deleteStudent} className="delete-action">
+                        <input type="hidden" name="studentId" value={student.id} />
+                        <label className="label" htmlFor={`delete-student-${student.id}`}>Confirmez en saisissant SUPPRIMER</label>
+                        <input className="input" id={`delete-student-${student.id}`} name="confirmation" pattern="SUPPRIMER" required />
+                        <button className="button button-danger" type="submit">Supprimer définitivement</button>
+                      </form>
+                    </details>
+                  </td>
                 </tr>
               ))}
             </tbody>

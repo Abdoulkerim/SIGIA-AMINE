@@ -4,6 +4,8 @@ import { getCurrentUserContext } from '@/lib/auth/current-user'
 import { createArabicLevel, updateArabicLevel, deleteArabicLevel, assignStudentArabic, deleteArabicProfile, recordArabicSession, createArabicEvaluation, publishArabicEvaluation } from '../tahfiz-arabe-actions'
 import { ProgressBar } from '@/components/administration/progress-bar'
 import { ArabicSessionFields } from '@/components/tahfiz-arabe/arabic-session-fields'
+import { StudentFilterSelect } from '@/components/students/student-filter-select'
+import { cookies } from 'next/headers'
 
 const levelFrench: Record<string,string> = { 'الثاني الاعدادي':'Deuxième année du collège', 'الرابع الاعدادي':'Quatrième année du collège', 'الثالث الاعدادي':'Troisième année du collège', 'الأول الاعدادي':'Première année du collège', 'الثانوية':'Première année du lycée', 'الثاني الثانوي':'Deuxième année du lycée', 'الثالث الثانوي':'Troisième année du lycée', 'الأول':'Niveau 1', 'الثاني':'Niveau 2', 'الثالث':'Niveau 3', Cp1:'Cours préparatoire 1' }
 const statuses: Record<string,string> = { active:'Actif', paused:'Suspendu', completed:'Terminé', inactive:'Inactif' }
@@ -31,27 +33,69 @@ function arabicTeacherLabel(profile: any, teachers: any[]) {
   return teacher ? `${teacher.last_name} ${teacher.first_name}`.trim() : null
 }
 
-export default async function ArabicPage({ searchParams }: { searchParams: Promise<{ error?: string; created?: string; updated?: string; assigned?: string; session?: string; evaluation?: string; published?: string }> }) {
+export default async function ArabicPage({ searchParams }: { searchParams: Promise<{ error?: string; created?: string; updated?: string; assigned?: string; session?: string; evaluation?: string; published?: string; stage?: string }> }) {
   const query = await searchParams
+  const cookieStore = await cookies()
+  const persistedStage = cookieStore.get('arabic-active-stage')?.value
   const context = await getCurrentUserContext()
   if (!context?.profile.school_id) return null
   const supabase = await createClient()
   const schoolId = context.profile.school_id
-  const [{ data: levels }, { data: optionsJson, error: optionsError }, { data: staffJson, error: staffError }, { data: profiles, error: profilesError }, { data: sessions }, { data: evaluations }] = await Promise.all([
+  const [{ data: levels }, { data: optionsJson, error: optionsError }, { data: staffJson, error: staffError }, { data: profiles, error: profilesError }, { data: sessions }, { data: evaluations }, { data: accessibleStageRows }] = await Promise.all([
     supabase.from('arabic_levels').select('id,code,name,name_fr,education_stage,sequence_no,is_active,description').eq('school_id',schoolId).order('sequence_no').order('name'),
     supabase.rpc('get_specialized_form_options', { p_module: 'arabic' }),
     supabase.rpc('get_specialized_staff', { p_module: 'arabic' }),
     (supabase as any).from('student_arabic').select('id,student_id,arabic_level_id,assigned_teacher_id,start_date,current_progress,status,notes,arabic_full_name,arabic_levels(code,name,name_fr,education_stage),employees(first_name,last_name)').eq('school_id',schoolId).order('updated_at',{ascending:false}),
     supabase.from('arabic_sessions').select('id,student_id,session_date,activity_type,topic,score,observation,teacher_id,attendance_status,is_published,students(first_name,last_name),employees(first_name,last_name)').eq('school_id',schoolId).order('session_date',{ascending:false}).limit(30),
     supabase.from('arabic_evaluations').select('id,student_id,period_id,evaluation_date,title,skill_area,score,observation,evaluator_id,is_published,published_at,students(first_name,last_name),academic_periods(name)').eq('school_id',schoolId).order('evaluation_date',{ascending:false}).limit(30),
+    (supabase as any).from('user_access_stages').select('education_stage').eq('user_id',context.claims.sub).eq('school_id',schoolId),
   ])
   const options = (optionsJson ?? {}) as any
   const students = Array.isArray(options.students) ? options.students : []
+  const classes = Array.isArray(options.classes) ? options.classes : []
+  const enrollments = Array.isArray(options.enrollments) ? options.enrollments : []
+  const stageLabels: Record<string, string> = {
+    maternelle: 'Maternelle',
+    primaire: 'Primaire',
+    secondaire: 'Secondaire',
+    formation: 'Centre de formation',
+    autre: 'Autre',
+  }
+  const allAvailableStages: string[] = [...new Set(enrollments
+    .map((enrollment: any) => enrollment.education_stage)
+    .filter((stage: unknown): stage is string => typeof stage === 'string' && Boolean(stage)))].sort() as string[]
+  const isArabicManager = context.roles.some(({ code }) => code === 'arabic_manager')
+  const configuredAccessibleStages = (accessibleStageRows ?? []).map((row: any) => row.education_stage)
+  const availableStages = isArabicManager
+    ? allAvailableStages.filter((stage) => configuredAccessibleStages.length === 0 || configuredAccessibleStages.includes(stage))
+    : allAvailableStages
+  const selectedStage = typeof query.stage === 'string' && availableStages.includes(query.stage)
+    ? query.stage
+    : persistedStage && availableStages.includes(persistedStage)
+      ? persistedStage
+      : context.profile.education_stage && availableStages.includes(context.profile.education_stage)
+      ? context.profile.education_stage
+      : availableStages[0] ?? ''
+  const studentStageById = new Map<string, string>()
+  for (const enrollment of enrollments as any[]) {
+    if (enrollment.student_id && typeof enrollment.education_stage === 'string') {
+      studentStageById.set(enrollment.student_id, enrollment.education_stage)
+    }
+  }
   const periods = Array.isArray(options.periods) ? options.periods : []
   const arabicSubjects = Array.isArray(options.subjects) ? options.subjects : []
   const activeLevels = (levels ?? []).filter((level: any) => level.is_active)
   const studentById = new Map((students ?? []).map((student: any) => [student.id, student]))
   const arabicProfiles = (profiles ?? []).map((profile: any) => ({ ...profile, students: studentById.get(profile.student_id) ?? null }))
+  const stageProfiles = selectedStage
+    ? arabicProfiles.filter((profile: any) => studentStageById.get(profile.student_id) === selectedStage)
+    : arabicProfiles
+  const stageSessions = selectedStage
+    ? (sessions ?? []).filter((session: any) => studentStageById.get(session.student_id) === selectedStage)
+    : (sessions ?? [])
+  const stageEvaluations = selectedStage
+    ? (evaluations ?? []).filter((evaluation: any) => studentStageById.get(evaluation.student_id) === selectedStage)
+    : (evaluations ?? [])
   let teachers = normalizeStaff(staffJson)
 
   const subjectLabels: Record<string, { fr: string; ar: string }> = {
@@ -89,7 +133,22 @@ export default async function ArabicPage({ searchParams }: { searchParams: Promi
     </section>
 
     <section className="card" style={{marginTop:16}}><h2>Affecter / mettre à jour un élève</h2><p className="page-subtitle">La progression est calculée depuis la moyenne des notes de séances et des évaluations, rapportée au barème configuré.</p><form action={assignStudentArabic} className="grid grid-3"><div className="field" style={{gridColumn:"1 / -1"}}><label className="label">Nom complet en arabe</label><input className="input" name="arabicFullName" dir="rtl" lang="ar" maxLength={200} placeholder="Saisir le nom en arabe" required/><small>Le nom français est conservé dans le dossier élève.</small></div>
-      <div className="field"><label className="label">Élève</label><select className="select" name="studentId" required><option value="">Choisir</option>{students?.map((s:any)=><option key={s.id} value={s.id}>{s.student_number} — {s.last_name} {s.first_name}</option>)}</select></div>
+      {availableStages.length > 0 ? (
+        <div className="field" style={{gridColumn:'1 / -1'}}>
+          <form method="get" className="it-access-status-form">
+            <label className="field" style={{margin:0,flex:1}}>
+              <span className="label">Cycle sélectionné</span>
+              <select className="select" name="stage" defaultValue={selectedStage}>
+                {availableStages.map((stage: string) => (
+                  <option key={stage} value={stage}>{stageLabels[stage] ?? stage}</option>
+                ))}
+              </select>
+            </label>
+            <button className="button button-secondary" type="submit">Afficher le cycle</button>
+          </form>
+        </div>
+      ) : null}
+      <StudentFilterSelect students={students as any[]} classes={classes} enrollments={enrollments} initialStage={selectedStage} hideStageFilter />
       <div className="field"><label className="label">Classe Arabe</label><select className="select" name="levelId"><option value="">Non défini</option>{activeLevels.map((l:any)=><option key={l.id} value={l.id}>{l.code} — {levelFrench[l.code] ? `${levelFrench[l.code]} / ` : ""}{l.name}</option>)}</select></div>
       <div className="field"><label className="label">Responsable enseignant</label><select className="select" name="teacherId"><option value="">{teachers.length ? 'Non défini' : 'Aucun enseignant actif disponible'}</option>{teachers.map((t:any)=><option key={t.id} value={t.id}>{t.last_name} {t.first_name} — {text(t.job_title)}</option>)}</select>{!teachers.length && !staffError ? (
   <small className="field-hint">
@@ -102,7 +161,7 @@ export default async function ArabicPage({ searchParams }: { searchParams: Promi
       <button className="button button-primary" type="submit">Enregistrer le profil</button>
     </form></section>
 
-        <section className="card" style={{marginTop:16}}><h2>Profils Arabe</h2>{arabicProfiles.length ? <div className="table-wrap"><table><thead><tr><th>Élève (français)</th><th>Nom écrit en arabe</th><th>Classe Arabe / المستوى</th><th>Responsable</th><th>Progression</th><th>Statut</th><th>Modification</th></tr></thead><tbody>{arabicProfiles.map((p:any)=><tr key={p.id}>
+        <section className="card" style={{marginTop:16}}><h2>Profils Arabe</h2>{stageProfiles.length ? <div className="table-wrap"><table><thead><tr><th>Élève (français)</th><th>Nom écrit en arabe</th><th>Classe Arabe / المستوى</th><th>Responsable</th><th>Progression</th><th>Statut</th><th>Modification</th></tr></thead><tbody>{stageProfiles.map((p:any)=><tr key={p.id}>
         <td>{p.students?.last_name} {p.students?.first_name}</td><td dir="rtl" lang="ar">{text(p.arabic_full_name)}</td><td dir="rtl" lang="ar">{text(p.arabic_levels?.name)}{p.arabic_levels?.name_fr || levelFrench[p.arabic_levels?.code ?? ""] ? <small className="field-hint">{p.arabic_levels?.name_fr || levelFrench[p.arabic_levels?.code]}</small> : null}</td><td>{text(arabicTeacherLabel(p, teachers))}</td><td><ProgressBar value={p.current_progress} /></td><td><span className="badge">{statuses[p.status] || p.status}</span></td>
       <td><details><summary>Modifier le profil</summary><form action={assignStudentArabic} className="grid" style={{minWidth:280,marginTop:8}}>
         <input type="hidden" name="studentId" value={p.student_id}/>
@@ -117,7 +176,7 @@ export default async function ArabicPage({ searchParams }: { searchParams: Promi
         <button className="button button-primary" type="submit">Enregistrer les corrections</button></form><form action={deleteArabicProfile} className="delete-action"><input type="hidden" name="profileId" value={p.id}/><button className="button button-danger" type="submit">Supprimer le profil</button></form></details></td>
     </tr>)}</tbody></table></div> : <p className="empty">Aucun profil Arabe.</p>}</section>
 
-    <section className="card" style={{marginTop:16}}><h2>Enregistrer une séance</h2><form action={recordArabicSession} className="grid grid-3"><ArabicSessionFields profiles={arabicProfiles as any[]} levels={(levels ?? []) as any[]} subjects={(arabicSubjects ?? []) as any[]} /><div className="field"><label className="label">Date</label><input className="input" name="sessionDate" type="date" required /></div>
+    <section className="card" style={{marginTop:16}}><h2>Enregistrer une séance</h2><form action={recordArabicSession} className="grid grid-3"><ArabicSessionFields profiles={stageProfiles as any[]} levels={(levels ?? []) as any[]} subjects={(arabicSubjects ?? []) as any[]} /><div className="field"><label className="label">Date</label><input className="input" name="sessionDate" type="date" required /></div>
       <div className="field"><label className="label">Thème / contenu</label><input className="input" name="topic" /></div>
       <div className="field"><label className="label">Score</label><input className="input" name="score" type="number" min="0" step="0.01" /></div>
       <div className="field"><label className="label">Présence</label><select className="select" name="attendanceStatus">{Object.entries(attendance).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></div>
@@ -128,7 +187,7 @@ export default async function ArabicPage({ searchParams }: { searchParams: Promi
     </form></section>
 
     <section className="card" style={{marginTop:16}}><h2>Évaluation Arabe</h2><form action={createArabicEvaluation} className="grid grid-3">
-      <div className="field"><label className="label">Élève</label><select className="select" name="studentId" required><option value="">{arabicProfiles.length ? 'Choisir' : 'Aucun élève Arabe disponible'}</option>{arabicProfiles.map((p:any)=><option key={p.student_id} value={p.student_id}>{arabicStudentLabel(p)}</option>)}</select>{!profilesError && !arabicProfiles.length ? <small className="field-hint">Créez d’abord un profil dans « Affecter / mettre à jour un élève ».</small> : null}</div>
+      <div className="field"><label className="label">Élève</label><select className="select" name="studentId" required><option value="">{stageProfiles.length ? 'Choisir' : 'Aucun élève Arabe disponible'}</option>{stageProfiles.map((p:any)=><option key={p.student_id} value={p.student_id}>{arabicStudentLabel(p)}</option>)}</select>{!profilesError && !stageProfiles.length ? <small className="field-hint">Créez d’abord un profil dans « Affecter / mettre à jour un élève ».</small> : null}</div>
       <div className="field"><label className="label">Période</label><select className="select" name="periodId"><option value="">Non définie</option>{periods?.map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
       <div className="field"><label className="label">Date</label><input className="input" name="evaluationDate" type="date" required /></div>
       <div className="field"><label className="label">Titre</label><input className="input" name="title" required placeholder="Évaluation" /></div>
@@ -141,8 +200,8 @@ export default async function ArabicPage({ searchParams }: { searchParams: Promi
     </form></section>
 
     <section className="grid grid-2" style={{marginTop:16}}>
-      <article className="card"><h2>Dernières séances</h2>{sessions?.length ? <div className="table-wrap"><table><thead><tr><th>Date</th><th>Élève</th><th>Activité</th><th>Présence</th><th>Publication</th></tr></thead><tbody>{sessions.map((s:any)=><tr key={s.id}><td>{s.session_date}</td><td>{s.students?.last_name} {s.students?.first_name}</td><td>{arabicSubjectLabel(s.activity_type)}</td><td>{attendance[s.attendance_status] || s.attendance_status}</td><td>{s.is_published ? 'Publié' : 'Brouillon'}</td></tr>)}</tbody></table></div> : <p className="empty">Aucune séance.</p>}</article>
-      <article className="card"><h2>Dernières évaluations</h2>{evaluations?.length ? <div className="table-wrap"><table><thead><tr><th>Date</th><th>Élève</th><th>Titre</th><th>Domaine</th><th>Score</th><th>Publication</th><th></th></tr></thead><tbody>{evaluations.map((e:any)=><tr key={e.id}><td>{e.evaluation_date}</td><td>{e.students?.last_name} {e.students?.first_name}</td><td>{e.title}</td><td>{text(e.skill_area)}</td><td>{text(e.score)}</td><td>{e.is_published ? 'Publié' : 'Brouillon'}</td><td>{!e.is_published ? <form action={publishArabicEvaluation}><input type="hidden" name="evaluationId" value={e.id}/><button className="button button-secondary" type="submit">Publier</button></form> : null}</td></tr>)}</tbody></table></div> : <p className="empty">Aucune évaluation.</p>}</article>
+      <article className="card"><h2>Dernières séances</h2>{stageSessions.length ? <div className="table-wrap"><table><thead><tr><th>Date</th><th>Élève</th><th>Activité</th><th>Présence</th><th>Publication</th></tr></thead><tbody>{stageSessions.map((s:any)=><tr key={s.id}><td>{s.session_date}</td><td>{s.students?.last_name} {s.students?.first_name}</td><td>{arabicSubjectLabel(s.activity_type)}</td><td>{attendance[s.attendance_status] || s.attendance_status}</td><td>{s.is_published ? 'Publié' : 'Brouillon'}</td></tr>)}</tbody></table></div> : <p className="empty">Aucune séance.</p>}</article>
+      <article className="card"><h2>Dernières évaluations</h2>{stageEvaluations.length ? <div className="table-wrap"><table><thead><tr><th>Date</th><th>Élève</th><th>Titre</th><th>Domaine</th><th>Score</th><th>Publication</th><th></th></tr></thead><tbody>{stageEvaluations.map((e:any)=><tr key={e.id}><td>{e.evaluation_date}</td><td>{e.students?.last_name} {e.students?.first_name}</td><td>{e.title}</td><td>{text(e.skill_area)}</td><td>{text(e.score)}</td><td>{e.is_published ? 'Publié' : 'Brouillon'}</td><td>{!e.is_published ? <form action={publishArabicEvaluation}><input type="hidden" name="evaluationId" value={e.id}/><button className="button button-secondary" type="submit">Publier</button></form> : null}</td></tr>)}</tbody></table></div> : <p className="empty">Aucune évaluation.</p>}</article>
     </section>
   </main>
 }

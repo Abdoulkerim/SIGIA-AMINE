@@ -190,10 +190,12 @@ export default {
     if (action === 'update-stage') {
       const newStage = typeof body.newEducationStage === 'string' ? body.newEducationStage : ''
       if (!stages.has(newStage)) return errorResponse('Cycle invalide.', 400)
-      const { error } = await ctx.supabaseAdmin.from('users')
+      // Keep the caller JWT so users.manage is visible to the education-stage trigger.
+      const { data: updatedUser, error } = await ctx.supabase.from('users')
         .update({ education_stage: newStage === 'parent' ? null : newStage })
-        .eq('id', userId).eq('school_id', schoolId)
+        .eq('id', userId).eq('school_id', schoolId).select('id').maybeSingle()
       if (error) return errorResponse(`Impossible de modifier le cycle : ${error.message}`, 400)
+      if (!updatedUser) return errorResponse('Vous n’êtes pas autorisé à modifier le cycle de ce compte.', 403)
       return Response.json({ updated: true })
     }
 

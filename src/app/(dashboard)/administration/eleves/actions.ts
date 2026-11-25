@@ -89,6 +89,46 @@ async function removeUploadedPhoto(supabase: Awaited<ReturnType<typeof createCli
   if (path) await supabase.storage.from(PHOTO_BUCKET).remove([path])
 }
 
+export async function deleteStudent(formData: FormData) {
+  const context = await getCurrentUserContext()
+  const schoolId = context?.profile.school_id
+  const studentId = z.string().uuid().safeParse(formData.get('studentId'))
+  const confirmation = z.literal('SUPPRIMER').safeParse(formData.get('confirmation'))
+  if (!schoolId) redirect('/login')
+  if (!studentId.success || !confirmation.success) {
+    redirect('/administration/eleves?error=' + encodeURIComponent('Confirmation ou élève invalide.'))
+  }
+
+  const supabase = await createClient()
+  const { data: student } = await supabase
+    .from('students')
+    .select('photo_url')
+    .eq('id', studentId.data)
+    .eq('school_id', schoolId)
+    .maybeSingle()
+  if (!student) {
+    redirect('/administration/eleves?error=' + encodeURIComponent('Élève introuvable dans cet établissement.'))
+  }
+
+  const { error: deleteError } = await (supabase as any).rpc('delete_student', {
+    p_student_id: studentId.data,
+  })
+  if (deleteError) {
+    redirect('/administration/eleves?error=' + encodeURIComponent(deleteError.message))
+  }
+
+  if (student.photo_url && !/^https?:\/\//i.test(student.photo_url)) {
+    await removeUploadedPhoto(supabase, student.photo_url)
+  }
+  revalidatePath('/administration/eleves')
+  revalidatePath('/administration/admissions')
+  revalidatePath('/administration/inscriptions')
+  revalidatePath('/vie-scolaire')
+  revalidatePath('/tahfiz-arabe')
+  revalidatePath('/wushu')
+  redirect('/administration/eleves?deleted=1')
+}
+
 export async function updateStudent(formData: FormData) {
   const context = await getCurrentUserContext()
   const schoolId = context?.profile.school_id

@@ -36,12 +36,17 @@ export async function createManagedUser(formData: FormData) {
   }
 
   const context = await getCurrentUserContext()
-  const canAssignPrivilegedRoles = context?.roles.some(({ code }) => code === 'super_admin' || code === 'founder') ?? false
+  const isSystemAdmin = context?.roles.some(({ code }) => code === 'super_admin' || code === 'founder') ?? false
+  const canAssignPrivilegedRoles = isSystemAdmin || context?.roles.some(({ code }) => code === 'it_admin') === true
   if (!context?.roles.some(({ code }) => ['it_admin', 'super_admin', 'founder'].includes(code ?? ''))) redirect(formUrl('Seul un Administrateur informatique, un Super administrateur ou le Fondateur peut créer des comptes.'))
   const supabase = await createClient()
   const { data: selectedRole } = await supabase.from('roles').select('code').eq('id', parsed.data.roleId).maybeSingle()
-  if (!selectedRole || (!canAssignPrivilegedRoles && ['super_admin', 'founder', 'it_admin'].includes(selectedRole.code))) {
-    redirect(formUrl(canAssignPrivilegedRoles ? 'Le rôle choisi est introuvable.' : 'Seuls le Fondateur et le Super administrateur peuvent attribuer un rôle d’administration.'))
+  if (!selectedRole
+    || (['super_admin', 'founder'].includes(selectedRole.code) && !canAssignPrivilegedRoles)
+    || (selectedRole.code === 'it_admin' && !isSystemAdmin)) {
+    redirect(formUrl(selectedRole?.code === 'it_admin'
+      ? 'Seuls le Fondateur et l’Administrateur système peuvent attribuer le rôle Administrateur informatique.'
+      : selectedRole ? 'Le rôle choisi ne peut pas être attribué par votre compte.' : 'Le rôle choisi est introuvable.'))
   }
 
   const { error } = await supabase.functions.invoke('managed-create-user', { body: parsed.data })

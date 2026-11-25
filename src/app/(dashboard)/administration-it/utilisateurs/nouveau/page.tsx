@@ -9,7 +9,7 @@ const stages = [['maternelle','Maternelle'],['primaire','Primaire'],['secondaire
 
 export default async function NewITUserPage({ searchParams }: { searchParams: Promise<{ error?: string; created?: string }> }) {
   const context = await getCurrentUserContext()
-  const canAssignPrivilegedRoles = context?.roles.some(({ code }) => code === 'super_admin' || code === 'founder') ?? false
+  const isSystemAdmin = context?.roles.some(({ code }) => code === 'super_admin' || code === 'founder') ?? false
   const isFounderOnly = context?.roles.some(({ code }) => code === 'founder')
     && !context?.roles.some(({ code }) => code === 'super_admin' || code === 'it_admin')
   if (!context?.roles.some(({ code }) => ['it_admin', 'super_admin', 'founder'].includes(code ?? ''))) redirect('/dashboard')
@@ -24,7 +24,7 @@ export default async function NewITUserPage({ searchParams }: { searchParams: Pr
   const directory = directoryResult.data
   const directoryError = directoryResult.error
   const schools = (directory?.schools ?? []).filter((school: { is_active: boolean }) => school.is_active)
-  const assignableRoles = (roles ?? []).filter((role) => canAssignPrivilegedRoles || !['super_admin', 'founder', 'it_admin'].includes(role.code))
+  const assignableRoles = (roles ?? []).filter((role) => isSystemAdmin || role.code !== 'it_admin')
   return <main className="page">
     <div className="page-header"><div><h1 className="page-title">Créer un compte utilisateur</h1><p className="page-subtitle">Définissez l’identité, l’école, le cycle de données et le rôle.</p></div><Link className="button button-secondary" href={isFounderOnly ? '/administration-it' : '/administration-it/utilisateurs'}>{isFounderOnly ? 'Retour à l’administration' : 'Retour aux utilisateurs'}</Link></div>
     {params.created ? <p className="success" role="status">Le compte a été créé et son rôle attribué.</p> : null}
@@ -38,7 +38,7 @@ export default async function NewITUserPage({ searchParams }: { searchParams: Pr
       <div className="field"><label className="label" htmlFor="password">Mot de passe initial</label><InitialPasswordField/><small>Au moins 10 caractères. Transmettez-le au nouvel utilisateur par un canal sûr.</small></div>
       <div className="field"><label className="label" htmlFor="schoolId">École</label><select className="select" id="schoolId" name="schoolId" required defaultValue={schools.length === 1 ? schools[0].id : ''}><option value="" disabled>Choisir une école</option>{schools.map((school: {id:string;name:string})=><option key={school.id} value={school.id}>{school.name}</option>)}</select></div>
       <div className="field"><label className="label" htmlFor="educationStage">Cycle / périmètre des données</label><select className="select" id="educationStage" name="educationStage" required defaultValue=""><option value="" disabled>Choisir un cycle</option>{stages.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></div>
-      <div className="field"><label className="label" htmlFor="roleId">Rôle et permissions</label><select className="select" id="roleId" name="roleId" required defaultValue=""><option value="" disabled>Choisir un rôle</option>{assignableRoles.map((role)=><option key={role.id} value={role.id}>{role.name} ({role.code})</option>)}</select><small>{canAssignPrivilegedRoles ? 'Les rôles Fondateur et Super administrateur sont disponibles pour les responsables autorisés.' : 'Les rôles Fondateur, Super administrateur et Administrateur informatique sont réservés au Fondateur et au Super administrateur.'}</small></div>
+      <div className="field"><label className="label" htmlFor="roleId">Rôle et permissions</label><select className="select" id="roleId" name="roleId" required defaultValue=""><option value="" disabled>Choisir un rôle</option>{assignableRoles.map((role)=><option key={role.id} value={role.id}>{role.name} ({role.code})</option>)}</select><small>{isSystemAdmin ? 'Les rôles Fondateur, Administrateur système et Administrateur informatique sont disponibles.' : 'Vous pouvez attribuer les rôles Coordonnateur / Fondateur et Administrateur système. Le rôle Administrateur informatique reste réservé au Fondateur et à l’Administrateur système.'}</small></div>
       <button className="button button-primary" style={{gridColumn:'1/-1'}} disabled={!schools.length || !assignableRoles.length}>Créer le compte et attribuer le rôle</button>
     </form></section>
   </main>

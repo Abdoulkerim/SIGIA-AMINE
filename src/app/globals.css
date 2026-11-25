@@ -413,6 +413,9 @@ tr:last-child td { border-bottom: 0; }
 .main { min-width: 0; }
 .topbar { min-height: 64px; background: #fff; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 24px; }
 .user-chip { display: flex; align-items: center; gap: 10px; }
+.arabic-stage-switch { min-width: 180px; }
+.arabic-stage-switch label { display: grid; gap: 3px; font-size: 11px; font-weight: 800; color: var(--muted); }
+.arabic-stage-switch .select { min-height: 38px; padding: 7px 10px; font-weight: 800; }
 .user-name { font-weight: 800; font-size: 14px; }
 .user-role { font-size: 12px; color: var(--muted); }
 

@@ -161,6 +161,24 @@ export async function setEmployeeStatus(formData: FormData) {
   redirect('/personnel/employes?updated=1')
 }
 
+export async function deleteEmployee(formData: FormData) {
+  const employeeId = uuid.safeParse(formData.get('employeeId'))
+  const confirmation = z.literal('SUPPRIMER').safeParse(formData.get('confirmation'))
+  if (!employeeId.success || !confirmation.success) {
+    fail('/personnel/employes', 'Confirmation ou employé invalide.')
+  }
+  const supabase = await client()
+  const { error } = await (supabase as any).rpc('delete_employee', {
+    p_employee_id: employeeId.data,
+  })
+  if (error) fail('/personnel/employes', error.message)
+  revalidatePath('/personnel')
+  revalidatePath('/personnel/employes')
+  revalidatePath('/personnel/enseignants')
+  revalidatePath('/pedagogie/affectations')
+  redirect('/personnel/employes?deleted=1')
+}
+
 export async function createContract(formData: FormData) {
   const employeeId = uuid.safeParse(formData.get('employeeId'))
   const type = z.string().trim().min(1).max(100).safeParse(formData.get('contractType'))

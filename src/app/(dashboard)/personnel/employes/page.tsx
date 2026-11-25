@@ -1,9 +1,9 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
-import { setEmployeeStatus } from '../personnel-actions'
+import { deleteEmployee, setEmployeeStatus } from '../personnel-actions'
 
-export default async function EmployeesPage({ searchParams }: { searchParams: Promise<{ error?: string; updated?: string }> }) {
+export default async function EmployeesPage({ searchParams }: { searchParams: Promise<{ error?: string; updated?: string; deleted?: string }> }) {
   const context = await getCurrentUserContext()
   if (!context?.profile.school_id) return null
 
@@ -33,6 +33,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
     </div>
     {params.error ? <p className="error">{params.error}</p> : null}
     {params.updated ? <p className="success">Dossier employé mis à jour.</p> : null}
+    {params.deleted ? <p className="success">Employé supprimé définitivement.</p> : null}
     <section className="card">
       <div className="table-wrap">
         <table>
@@ -57,6 +58,15 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
                   <input type="hidden" name="status" value={employee.status === 'active' ? 'inactive' : 'active'} />
                   <button className="button button-secondary" type="submit">{employee.status === 'active' ? 'Désactiver' : 'Activer'}</button>
                 </form> : null}
+                {canEdit ? <details className="user-delete">
+                  <summary>Supprimer</summary>
+                  <form action={deleteEmployee} className="delete-action">
+                    <input type="hidden" name="employeeId" value={employee.id} />
+                    <label className="label" htmlFor={`delete-employee-${employee.id}`}>Confirmez en saisissant SUPPRIMER</label>
+                    <input className="input" id={`delete-employee-${employee.id}`} name="confirmation" pattern="SUPPRIMER" required />
+                    <button className="button button-danger" type="submit">Supprimer définitivement</button>
+                  </form>
+                </details> : null}
               </td>
               </tr>
             })}

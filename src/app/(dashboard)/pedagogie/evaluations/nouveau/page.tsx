@@ -64,8 +64,7 @@ export default async function NewAssessmentPage({ searchParams }: { searchParams
         <form action={createAssessment}>
           <div className="grid grid-2">
             <AssessmentFields years={years ?? []} periods={periods ?? []} classes={classes ?? []} subjects={subjects ?? []} teachers={teachers ?? []} assignments={assignments ?? []} initialYearId={currentYear?.id ?? ''} teacherProfile={teacherProfile} />
-            <Field label="Type d’évaluation"><select className="select" name="assessmentTypeId"><option value="">Aucun type</option>{(types ?? []).map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></Field>
-            <Field label="Titre"><input className="input" name="title" placeholder="Ex. Devoir 1" required /></Field>
+            <Field label="Type d’évaluation"><select className="select" name="assessmentTypeId" required><option value="">Choisir le type</option>{(types ?? []).map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></Field>
             <Field label="Date"><input className="input" type="date" name="date" required /></Field>
             <Field label="Barème maximum"><input className="input" type="number" step="0.01" min="0.01" name="maxScore" defaultValue="20" required /></Field>
           </div>

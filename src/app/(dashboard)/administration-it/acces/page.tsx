@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserContext } from '@/lib/auth/current-user'
-import { assignUserRole, revokeUserRole, updateUserEducationStage, updateUserLoginAccess, saveUserPermissionOverrides } from '../access-actions'
+import { assignUserRole, revokeUserRole, updateUserEducationStage, updateUserAccessibleStages, updateUserLoginAccess, saveUserPermissionOverrides } from '../access-actions'
 
 const educationStages: Record<string, string> = {
   maternelle: 'Maternelle',
@@ -83,9 +83,14 @@ export default async function UserAccessPage({ searchParams }: { searchParams: P
   const { data: permissionOverrides, error: permissionOverridesError } = selectedUser && selectedUser.id !== context.profile.id
     ? await (supabase as any).from('user_permission_overrides').select('permission_id,is_granted').eq('user_id', selectedUser.id).eq('school_id', schoolId)
     : { data: [], error: null }
+  const { data: accessibleStageRows } = selectedUser
+    ? await (supabase as any).from('user_access_stages').select('education_stage').eq('user_id', selectedUser.id).eq('school_id', schoolId)
+    : { data: [] }
 
   const isPrivilegedManager = context.roles.some(({ code }) => ['super_admin', 'founder'].includes(code ?? ''))
   const assignableRoles = (roles ?? []).filter((role) => isPrivilegedManager || !['super_admin', 'founder', 'it_admin'].includes(role.code))
+  const selectedAccessibleStages = new Set((accessibleStageRows ?? []).map((row: any) => row.education_stage))
+  const hasArabicManagerRole = (assignments ?? []).some((assignment: any) => assignment.is_active && assignment.roles?.code === 'arabic_manager')
   const permissions = new Map<string, { code: string; name: string; module: string }>()
   for (const assignment of assignments ?? []) {
     if (!assignment.is_active) continue
@@ -169,6 +174,21 @@ export default async function UserAccessPage({ searchParams }: { searchParams: P
                   {canSetOwnInitialStage
                     ? <p className="page-subtitle" style={{ marginTop: 8 }}>Attribuez le cycle initial de votre compte. Vous pourrez ensuite demander Ã  un autre administrateur de le modifier.</p>
                     : <p className="page-subtitle" style={{ marginTop: 8 }}>Un compte ordinaire est limitÃ© Ã  un seul cycle. Les parents voient uniquement les dossiers de leurs enfants.</p>}
+                  {hasArabicManagerRole && !isOwnAccount ? (
+                    <form action={updateUserAccessibleStages} className="it-access-status-form" style={{ marginTop: 14, alignItems: 'flex-start' }}>
+                      <input type="hidden" name="userId" value={selectedUser.id} />
+                      <fieldset className="it-permission-group" style={{ margin: 0, flex: 1 }}>
+                        <legend>Cycles accessibles au responsable Arabe</legend>
+                        {Object.entries(educationStages).filter(([value]) => value !== 'parent').map(([value, label]) => (
+                          <label key={value} className="it-permission-option">
+                            <input type="checkbox" name="accessibleStages" value={value} defaultChecked={selectedAccessibleStages.has(value)} />
+                            <span>{label}</span>
+                          </label>
+                        ))}
+                      </fieldset>
+                      <button className="button button-primary" type="submit">Enregistrer les cycles</button>
+                    </form>
+                  ) : null}
                 </>
               )}
             </section>

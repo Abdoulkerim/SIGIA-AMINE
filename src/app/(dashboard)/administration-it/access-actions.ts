@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 const uuid = z.string().uuid()
 const statusSchema = z.enum(['active', 'inactive', 'suspended'])
 const educationStageSchema = z.enum(['maternelle', 'primaire', 'secondaire', 'formation', 'autre', 'parent'])
+const accessibleStageSchema = z.enum(['maternelle', 'primaire', 'secondaire', 'formation', 'autre'])
 const protectedRoleCodes = new Set(['super_admin', 'founder', 'it_admin'])
 
 function accessUrl(userId?: string, error?: string, updated?: string) {
@@ -174,6 +175,46 @@ export async function updateUserEducationStage(formData: FormData) {
   const { data: updatedUser, error } = await update.select('id').maybeSingle()
   if (error) redirect(accessUrl(target.data, 'Modification du cycle refusée : ' + error.message))
   if (!updatedUser) redirect(accessUrl(target.data, 'Le cycle a deja ete attribué ou le compte est introuvable.'))
+
+  invalidateAccessPages()
+  redirect(accessUrl(target.data, undefined, 'stage'))
+}
+
+export async function updateUserAccessibleStages(formData: FormData) {
+  const target = uuid.safeParse(formData.get('userId'))
+  if (!target.success) redirect(accessUrl(undefined, 'Utilisateur invalide.'))
+
+  const manager = await getAccessManager()
+  if (!manager) redirect(accessUrl(target.data, 'Accès non autorisé.'))
+  const { schoolId, supabase } = manager
+  if (!await ensureTargetUser(supabase, target.data, schoolId)) {
+    redirect(accessUrl(target.data, 'Utilisateur introuvable dans cet établissement.'))
+  }
+
+  const stages: string[] = []
+  for (const value of formData.getAll('accessibleStages')) {
+    if (typeof value !== 'string') continue
+    const parsed = accessibleStageSchema.safeParse(value)
+    if (parsed.success) stages.push(parsed.data)
+  }
+
+  if (!stages.length) redirect(accessUrl(target.data, 'Sélectionnez au moins un cycle accessible.'))
+
+  const { error: deleteError } = await supabase
+    .from('user_access_stages')
+    .delete()
+    .eq('user_id', target.data)
+    .eq('school_id', schoolId)
+  if (deleteError) redirect(accessUrl(target.data, 'Modification des cycles refusée : ' + deleteError.message))
+
+  const { error: insertError } = await supabase
+    .from('user_access_stages')
+    .insert(stages.map((educationStage) => ({
+      user_id: target.data,
+      school_id: schoolId,
+      education_stage: educationStage,
+    })))
+  if (insertError) redirect(accessUrl(target.data, 'Modification des cycles refusée : ' + insertError.message))
 
   invalidateAccessPages()
   redirect(accessUrl(target.data, undefined, 'stage'))

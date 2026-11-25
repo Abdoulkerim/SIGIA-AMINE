@@ -69,6 +69,7 @@ export default {
     if (assignmentsError) return jsonError('Impossible de vÃ©rifier les droits administrateur.', 500)
     const creatorRoles = (assignments ?? []).map((assignment: any) => assignment.roles?.code as string | undefined)
     const isSystemAdmin = creatorRoles.includes('super_admin') || creatorRoles.includes('founder')
+    const canAssignPrivilegedRoles = isSystemAdmin || creatorRoles.includes('it_admin')
     if (!creatorRoles.some((code) => allowedCreators.has(code ?? ''))) return jsonError('Seul un Administrateur informatique ou système peut créer des comptes.', 403)
 
     const { data: school, error: schoolError } = await ctx.supabaseAdmin.from('schools').select('id,is_active').eq('id', schoolId).maybeSingle()
@@ -79,7 +80,9 @@ export default {
       .from('roles').select('id,code').eq('id', roleId).maybeSingle()
     if (roleError) return jsonError('Impossible de vÃ©rifier le rÃ´le sÃ©lectionnÃ©.', 500)
     if (!role) return jsonError('Le rÃ´le sÃ©lectionnÃ© est introuvable.', 400)
-    if (protectedRoles.has(role.code) && !isSystemAdmin) {
+    if (protectedRoles.has(role.code)
+      && ((role.code === 'it_admin' && !isSystemAdmin)
+        || (role.code !== 'it_admin' && !canAssignPrivilegedRoles))) {
       return jsonError('Seul un super administrateur ou le fondateur peut attribuer ce rÃ´le.', 403)
     }
 

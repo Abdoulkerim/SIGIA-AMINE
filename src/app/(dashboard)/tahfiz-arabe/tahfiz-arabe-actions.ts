@@ -4,10 +4,48 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
 
 const uuid = z.string().uuid()
 const date = z.string().min(1)
 const num = z.coerce.number().finite()
+
+export async function setArabicActiveStage(formData: FormData) {
+  const stage = z.enum(['maternelle', 'primaire', 'secondaire', 'formation', 'autre']).safeParse(formData.get('stage'))
+  const returnToValue = formData.get('returnTo')
+  const returnTo = typeof returnToValue === 'string' && returnToValue.startsWith('/') && !returnToValue.startsWith('//')
+    ? returnToValue
+    : '/tahfiz-arabe/arabe'
+  if (!stage.success) redirect(`${returnTo}?error=${encodeURIComponent('Cycle Arabe invalide.')}`)
+
+  const { getCurrentUserContext } = await import('@/lib/auth/current-user')
+  const context = await getCurrentUserContext()
+  if (!context?.profile.school_id || !context.roles.some(({ code }) => code === 'arabic_manager')) {
+    redirect(`${returnTo}?error=${encodeURIComponent('Accès responsable Arabe requis.')}`)
+  }
+
+  const supabase = await createClient()
+  const { data: configuredRows } = await (supabase as any)
+    .from('user_access_stages')
+    .select('education_stage')
+    .eq('user_id', context.profile.id)
+    .eq('school_id', context.profile.school_id)
+  const configuredStages = (configuredRows ?? []).map((row: any) => row.education_stage)
+  if (configuredStages.length > 0 && !configuredStages.includes(stage.data)) {
+    redirect(`${returnTo}?error=${encodeURIComponent('Ce cycle ne fait pas partie du périmètre autorisé.')}`)
+  }
+
+  const cookieStore = await cookies()
+  cookieStore.set('arabic-active-stage', stage.data, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 365,
+  })
+  revalidatePath('/tahfiz-arabe/arabe')
+  redirect(returnTo)
+}
 
 function fail(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`)
